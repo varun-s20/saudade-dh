@@ -1,0 +1,148 @@
+/*
+ * PhotoMount: a snapshot print with a worn white border, photo-album corner pockets,
+ * optional washi tape and a handwritten caption. Global CSS, `sd-` prefix.
+ */
+
+/* Same layer order as Tailwind v4, declared here too so it holds whichever stylesheet loads first.
+ * Component styles live in `components`, so Tailwind utilities passed via className win. */
+@layer theme, base, components, utilities;
+
+@layer components {
+  .sd-photo {
+    position: relative;
+    display: block;
+    margin: 0;
+  }
+
+  .sd-photo__mount {
+    position: relative;
+  }
+
+  .sd-photo__print {
+    position: relative;
+    padding: 4.6% 4.6% 5.4%;
+    border-radius: 1.5px;
+    background-color: var(--paper-raised);
+    background-image: var(--texture-grain);
+    background-size: var(--texture-grain-size);
+    box-shadow: var(--elev-stamp);
+  }
+
+  /* Worn border: a tan hairline and a little yellowing creeping in from the edges. */
+  .sd-photo__print::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--paper-edge) 40%, transparent),
+      inset 0 0 12px 1px var(--paper-foxing);
+  }
+
+  .sd-photo__window {
+    position: relative;
+    overflow: hidden;
+    background: var(--paper-deep);
+  }
+
+  .sd-photo__img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    /* Sun-bleached print: a touch less saturated, warmer, lifted blacks. */
+    filter: saturate(0.86) sepia(0.12) contrast(0.95) brightness(1.03);
+  }
+
+  /* Print surface: soft vignette + grain over the image. */
+  .sd-photo__window::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(120% 100% at 50% 45%, transparent 62%, color-mix(in srgb, var(--ink) 16%, transparent) 100%),
+      var(--texture-grain);
+    background-size: 100% 100%, var(--texture-grain-size);
+    box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--ink) 25%, transparent);
+  }
+
+  /* Album corner pockets: an ink triangle with a paler folded lip along the diagonal. */
+  .sd-photo__corner {
+    position: absolute;
+    width: clamp(16px, 13%, 30px);
+    aspect-ratio: 1;
+    background: linear-gradient(
+      135deg,
+      var(--ink) 0 44%,
+      color-mix(in srgb, var(--paper-raised) 22%, var(--ink)) 44% 50%,
+      transparent 50%
+    );
+    filter: var(--elev-stamp-drop);
+    pointer-events: none;
+  }
+  .sd-photo__corner--tl {
+    top: -3px;
+    left: -3px;
+  }
+  .sd-photo__corner--tr {
+    top: -3px;
+    right: -3px;
+    transform: rotate(90deg);
+  }
+  .sd-photo__corner--br {
+    right: -3px;
+    bottom: -3px;
+    transform: rotate(180deg);
+  }
+  .sd-photo__corner--bl {
+    left: -3px;
+    bottom: -3px;
+    transform: rotate(270deg);
+  }
+
+  /* Washi tape: translucent, fine-striped, with torn zigzag ends. */
+  .sd-photo__tape {
+    --tape: var(--accent-rose);
+    position: absolute;
+    top: clamp(-14px, -4%, -8px);
+    left: 50%;
+    width: 36%;
+    height: clamp(16px, 10%, 26px);
+    transform: translateX(-50%) rotate(-3.5deg);
+    background:
+      repeating-linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--paper-raised) 22%, transparent) 0 3px,
+        transparent 3px 9px
+      ),
+      color-mix(in srgb, var(--tape) 62%, transparent);
+    mix-blend-mode: multiply;
+    clip-path: polygon(
+      0 0, 3px 14%, 0 28%, 3px 42%, 0 57%, 3px 71%, 0 86%, 3px 100%,
+      calc(100% - 3px) 100%, 100% 86%, calc(100% - 3px) 71%, 100% 57%, calc(100% - 3px) 42%, 100% 28%, calc(100% - 3px) 14%, 100% 0
+    );
+    pointer-events: none;
+  }
+
+  .sd-photo__caption {
+    margin-top: 0.55rem;
+    padding-inline: 0.25rem;
+    font-family: var(--ff-hand);
+    font-size: 1.375rem;
+    line-height: 1.2;
+    color: var(--ink-letter);
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  :lang(ja) .sd-photo__caption,
+  :lang(zh) .sd-photo__caption,
+  :lang(ko) .sd-photo__caption,
+  :lang(ar) .sd-photo__caption,
+  :lang(hi) .sd-photo__caption {
+    font-family: var(--ff-hand-fallback);
+    font-size: 1.125rem;
+  }
+}

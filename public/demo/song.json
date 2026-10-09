@@ -1,0 +1,27 @@
+{
+  "spotify": {
+    "url": "https://open.spotify.com/track/6dGnYIeXmHdcikdzNNDMm2",
+    "trackId": "6dGnYIeXmHdcikdzNNDMm2",
+    "title": "Here Comes The Sun - Remastered 2009",
+    "artist": "The Beatles",
+    "album": "Abbey Road (Remastered 2009)",
+    "thumbnail": "https://image-cdn-ak.spotifycdn.com/image/ab67616d00001e02dc30583ba717007b00cceb25",
+    "embedUrl": "https://open.spotify.com/embed/track/6dGnYIeXmHdcikdzNNDMm2",
+    "oembedCors": true
+  },
+  "appleMusic": {
+    "url": "https://music.apple.com/us/album/here-comes-the-sun/1441164426?i=1441164589&uo=4",
+    "trackId": 1441164589,
+    "albumId": 1441164426,
+    "title": "Here Comes the Sun",
+    "artist": "The Beatles",
+    "album": "Abbey Road (Remastered)",
+    "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/df/db/61/dfdb615d-47f8-06e9-9533-b96daccc029f/18UMGIM31076.rgb.jpg/100x100bb.jpg",
+    "durationMs": 185733,
+    "storefront": "us",
+    "embedUrl": "https://embed.music.apple.com/us/album/here-comes-the-sun/1441164426?i=1441164589",
+    "lookupCors": true
+  },
+  "verifiedOn": "2026-10-08",
+  "notes": "Verified live on 2026-10-08. SPOTIFY: GET https://open.spotify.com/oembed?url=<track url> returned 200 with title 'Here Comes The Sun - Remastered 2009', thumbnail_url (300x300) and iframe_url; response carries 'access-control-allow-origin: *' so it can be called from the browser. oEmbed does NOT return the artist; 'The Beatles' was confirmed from the track page og:description ('The Beatles - Abbey Road (Remastered 2009) - Song - 1969'). If artist is needed at runtime, store what the sender sees or scrape og tags server-side. APPLE MUSIC: GET https://itunes.apple.com/lookup?id=1441164589 returned 200 (Content-Type text/javascript, JSON body) with 'Access-Control-Allow-Origin: *'. Same 2009 remaster as the Spotify track. Artwork URL size segment can be swapped (100x100bb -> 600x600bb, verified 200) for a sharper vinyl label. EMBEDS: open.spotify.com/embed/track/... and embed.music.apple.com/... both returned 200 with no X-Frame-Options and no CSP frame-ancestors, so both can be iframed. Logged-out listeners get ~30 s previews (accepted by client). SHORT LINKS (spotify.link): tested 3 real links taken from a public Spotify Community thread. Behaviour depends on User-Agent (Branch.io sniffing): with a curl-like UA ('curl/8.x') the server answers 307 with Location: https://open.spotify.com/track/<id>?si=... (resolvable with redirect:'manual'); with Node's default fetch UA or a browser UA it 307s to spotify.app.link/<code>, an HTML interstitial that still contains the canonical open.spotify.com/track/<id> URL in its markup; bot UAs (facebookexternalhit, Slackbot) get 200 HTML. Recommended server-side resolver: fetch with redirect:'follow', then regex the first open.spotify.com/(track|album|playlist|episode)/[A-Za-z0-9]{22} from the final URL or body; reject anything that is not /track/ (one tested short link resolved to a podcast episode). Passing a spotify.link URL straight to oEmbed is unreliable (one link returned 200, another returned 504 'upstream request timeout' twice), so resolve to the canonical track URL before calling oEmbed. An invalid spotify.link code 307-redirects to https://open.spotify.com/ (no error status), so treat 'no track id found' as an invalid link. Apple Music has no public short-link domain to test; music.apple.com URLs carry the album id in the path and the song id in ?i=."
+}

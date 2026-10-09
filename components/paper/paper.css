@@ -1,0 +1,86 @@
+/*
+ * Paper surfaces. Global CSS with an `sd-` prefix (the project's turbopack CSS rule disables
+ * CSS Modules). Background layers are composed through custom properties so modifiers
+ * (ruled, margin, aged) combine without overriding one another.
+ */
+
+/* Same layer order as Tailwind v4, declared here too so it holds whichever stylesheet loads first.
+ * Component styles live in `components`, so Tailwind utilities passed via className win. */
+@layer theme, base, components, utilities;
+
+@layer components {
+  .sd-paper {
+    --rule-gap: var(--rule-letter);
+    --margin-x: 2.25rem;
+    --layer-margin: linear-gradient(transparent, transparent);
+    --layer-rules: linear-gradient(transparent, transparent);
+    --layer-age: linear-gradient(transparent, transparent);
+    position: relative;
+    isolation: isolate;
+    color: var(--ink);
+    background-color: var(--paper-raised);
+    background-image: var(--layer-margin), var(--layer-rules), var(--texture-fibre), var(--texture-grain), var(--layer-age);
+    background-size:
+      100% 100%,
+      100% var(--rule-gap),
+      400px 400px,
+      var(--texture-grain-size),
+      100% 100%;
+    background-repeat: no-repeat, repeat-y, repeat, repeat, no-repeat;
+    background-origin: border-box, content-box, border-box, border-box, border-box;
+    background-clip: border-box, content-box, border-box, border-box, border-box;
+  }
+
+  .sd-paper--clean {
+    border-radius: var(--r-paper);
+  }
+
+  .sd-paper--shadow.sd-paper--clean {
+    box-shadow: var(--elev-paper);
+  }
+
+  /* Deckled / torn sheets are clipped, so their shadow lives on a wrapper and follows the edge. */
+  .sd-paper-wrap {
+    position: relative;
+  }
+  .sd-paper-wrap--shadow {
+    filter: var(--elev-paper-drop);
+  }
+
+  /* One faint line per handwritten line; the line sits just under the text baseline. */
+  .sd-paper--ruled {
+    --layer-rules: linear-gradient(to bottom, transparent calc(100% - 1px), var(--paper-rule) calc(100% - 1px));
+  }
+
+  .sd-paper--margin {
+    --layer-margin: linear-gradient(
+      to right,
+      transparent calc(var(--margin-x) - 1px),
+      var(--paper-rule-margin) calc(var(--margin-x) - 1px) calc(var(--margin-x) + 0.5px),
+      transparent calc(var(--margin-x) + 0.5px)
+    );
+  }
+
+  /* Aged: cream rather than white, a tan edge, and a few foxing spots. */
+  .sd-paper--aged {
+    background-color: var(--paper);
+    /* Opaque stops: cream in the middle, tanning towards the edges. */
+    --layer-age: radial-gradient(130% 95% at 50% 42%, var(--paper) 58%, color-mix(in srgb, var(--paper-edge) 34%, var(--paper)) 100%);
+  }
+
+  .sd-paper--aged::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 9% 6%, var(--paper-foxing) 0 1.2px, transparent 2.6px),
+      radial-gradient(circle at 11% 9%, var(--paper-foxing) 0 0.8px, transparent 2px),
+      radial-gradient(circle at 91% 14%, var(--paper-foxing) 0 1.6px, transparent 3.4px),
+      radial-gradient(circle at 84% 88%, var(--paper-foxing) 0 1.1px, transparent 2.6px),
+      radial-gradient(ellipse 18% 9% at 96% 98%, var(--paper-foxing), transparent 70%),
+      radial-gradient(ellipse 14% 7% at 2% 60%, var(--paper-foxing), transparent 70%);
+    opacity: 0.9;
+  }
+}

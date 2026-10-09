@@ -1,0 +1,1169 @@
+/*
+ * Sender portal (S7–S14), "Wish You Were Here" (D-062). Global CSS with an `ss-` prefix inside
+ * @layer components (README rule 15), so Tailwind utilities passed via className still win.
+ * Tokens only. Motion (Emil Kowalski): press answers in 140ms at scale(.97), hover only for real
+ * pointers, ease-out to enter, transform/opacity only, a still reduced-motion state.
+ */
+
+@layer theme, base, components, utilities;
+
+@layer components {
+  /* ── Page frame ───────────────────────────────────────────────────────── */
+  .ss-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    /* Postmarks and stamp overhang are intentional (rule 16): clip sideways scroll at the page. */
+    overflow-x: clip;
+  }
+
+  /* Containers: a comfortable editor column, or the full page grid (portal home). */
+  .ss-wrap {
+    width: 100%;
+    max-width: calc(48rem + 2 * var(--gutter));
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+  .ss-wrap--wide {
+    max-width: calc(var(--measure-page) + 2 * var(--gutter));
+  }
+
+  /* A postcard-white bar, like the public header */
+  .ss-head {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-header);
+    padding-top: max(0.6rem, env(safe-area-inset-top));
+    padding-bottom: 0.6rem;
+    border-bottom: 1.5px solid var(--paper-shadow);
+    background-color: color-mix(in srgb, var(--paper) 94%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  @media (min-width: 48rem) {
+    .ss-head {
+      padding-block: 0.85rem;
+    }
+  }
+
+  /* Stamp tabs (tablet and up): a pill rail; each tab carries its stamp's world colour as a dot. */
+  .ss-tabs {
+    align-items: stretch;
+    gap: 2px;
+    padding: 4px;
+    border: var(--line-w) solid var(--ink);
+    border-radius: var(--r-pill);
+    background: var(--paper-raised);
+    box-shadow: var(--elev-print-sm);
+  }
+  .ss-tabs__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: var(--tap-min);
+    padding: 0 1rem 0 0.85rem;
+    border-radius: var(--r-pill);
+    color: var(--ink);
+    font-family: var(--ff-display);
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition:
+      background-color var(--dur-ui) ease,
+      color var(--dur-ui) ease,
+      transform var(--dur-press) var(--ease-out-strong);
+  }
+  .ss-tabs__tab::before {
+    content: "";
+    width: 0.6rem;
+    height: 0.6rem;
+    flex: none;
+    border: 1.5px solid var(--ink);
+    border-radius: 50%;
+    background: var(--dot, var(--paper-deep));
+  }
+  .ss-tabs__tab:active {
+    transform: scale(0.97);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .ss-tabs__tab:not([aria-current="page"]):hover {
+      background: var(--paper-deep);
+    }
+  }
+  .ss-tabs__tab[aria-current="page"] {
+    background: var(--accent-navy);
+    color: var(--paper-raised);
+  }
+  .ss-tabs__tab[aria-current="page"]::before {
+    border-color: var(--paper-raised);
+  }
+
+  .ss-head__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: var(--tap-min);
+    margin-left: -0.35rem;
+    padding: 0 0.5rem 0 0.35rem;
+    border-radius: var(--r-soft);
+    color: var(--ink-soft);
+    font-family: var(--ff-ui);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .ss-head__back:hover {
+      color: var(--ink);
+    }
+  }
+
+  .ss-main {
+    flex: 1 1 auto;
+    padding-top: 0.75rem;
+    padding-bottom: 4rem;
+  }
+  @media (min-width: 48rem) {
+    .ss-main {
+      padding-top: 2.5rem;
+    }
+  }
+  .ss-page--docked .ss-main {
+    /* Room for the pinned slip + the home indicator. */
+    padding-bottom: calc(9rem + env(safe-area-inset-bottom));
+  }
+
+  .ss-titlebar {
+    margin-bottom: 1.75rem;
+  }
+
+  /* Editor title card: the front of a postcard in the stamp's world colour, rays and linen,
+   * its stamp in the corner (peels up under a mouse). */
+  .ss-world {
+    margin-bottom: 2.25rem;
+    padding: var(--border-card);
+    border-radius: var(--r-card);
+    background: var(--paper-raised);
+    box-shadow: var(--elev-card);
+  }
+  .ss-world__scene {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 1rem;
+    padding: 1.3rem 1.15rem 1.4rem 1.3rem;
+    overflow: hidden;
+    border-radius: calc(var(--r-card) - 6px);
+    background-color: var(--world);
+    background-image: var(--texture-linen-light), var(--texture-rays);
+    background-size:
+      var(--texture-linen-size),
+      100% 100%;
+  }
+  .ss-world .ss-lede {
+    color: color-mix(in srgb, var(--ink) 85%, transparent);
+  }
+  .ss-world__stamp {
+    width: 4.75rem;
+    margin-top: 0.25rem;
+  }
+  /* scaled from its top-left corner, so the visible stamp fills its 4.75rem column exactly (from
+   * the top right, the full-size box pushed it past the card's clipped edge on phones) */
+  .ss-world__stamp > * {
+    scale: 0.68;
+    transform-origin: top left;
+  }
+  @media (min-width: 40rem) {
+    .ss-world__scene {
+      padding: 1.9rem 1.9rem 2rem 2.1rem;
+      gap: 2rem;
+    }
+    .ss-world__stamp {
+      width: 7rem;
+    }
+    .ss-world__stamp > * {
+      scale: 1;
+    }
+  }
+  /* Large-letter capitals; an <em> switches to the script hand (globals) */
+  .ss-title {
+    margin-top: 0.35rem;
+    font-family: var(--ff-display);
+    font-size: clamp(2rem, 1.35rem + 2.8vw, 3.6rem);
+    font-weight: 400;
+    line-height: 0.98;
+    letter-spacing: var(--tracking-display);
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .ss-lede {
+    margin-top: 0.75rem;
+    max-width: 38rem;
+    font-size: var(--fs-lede);
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+
+  .ss-danger-quiet {
+    --fg: var(--danger);
+  }
+
+  /* Entrance for things that appear (cards, notices): a short rise. */
+  .ss-rise {
+    animation: ss-rise var(--motion-dur-slow) var(--motion-ease-paper) both;
+  }
+  @keyframes ss-rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* ── Pinned bottom slip (Save / Preview + Seal) ───────────────────────── */
+  /* Keep toasts ("Sealed with care") above the pinned Save bar instead of over it. */
+  body:has(.ss-dock) {
+    --toast-offset: 5.75rem;
+  }
+
+  .ss-dock {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: var(--z-header);
+    pointer-events: none;
+    transform: translateY(calc(-1 * var(--ss-kb, 0px)));
+    transition: transform var(--motion-dur-fast) var(--motion-ease-out);
+  }
+
+  .ss-dock__slip {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 48rem;
+    margin-inline: auto;
+    padding: 0.75rem var(--gutter) max(0.75rem, env(safe-area-inset-bottom));
+    border-top: var(--line-w) solid var(--ink);
+    background-color: var(--paper-raised);
+    background-image: var(--texture-grain);
+    background-size: var(--texture-grain-size);
+    box-shadow: var(--elev-sheet);
+  }
+  /* Docks that only make sense on phones/tablets (the home's actions sit inline on wide screens). */
+  @media (min-width: 64rem) {
+    .ss-dock--narrow {
+      display: none;
+    }
+  }
+
+  .ss-dock[data-keyboard="open"] .ss-dock__slip {
+    padding-bottom: 0.7rem;
+  }
+  @media (min-width: 640px) {
+    .ss-dock__slip {
+      width: calc(100% - 2 * var(--gutter));
+      margin-bottom: 1.25rem;
+      padding-inline: 1.1rem 0.85rem;
+      padding-block: 0.6rem;
+      padding-inline: 1.4rem 0.6rem;
+      border: var(--line-w) solid var(--ink);
+      border-radius: var(--r-pill);
+      box-shadow: var(--elev-print), var(--elev-lifted);
+    }
+  }
+
+  .ss-dock__status {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    font-size: 0.9375rem;
+    line-height: 1.3;
+    color: var(--ink-faded);
+  }
+  .ss-dock__status[data-tone="dirty"] {
+    color: var(--accent-ochre-ink);
+  }
+  .ss-dock__status[data-tone="saved"] {
+    color: var(--success);
+  }
+  .ss-dock__status[data-tone="error"] {
+    color: var(--danger);
+  }
+  .ss-dock__status[data-tone="busy"] {
+    color: var(--ink-soft);
+  }
+
+  /* ── Confirm slip (native <dialog>) ───────────────────────────────────── */
+  .ss-confirm {
+    width: min(26rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    margin: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    overflow: visible;
+  }
+  .ss-confirm::backdrop {
+    background: var(--scrim);
+  }
+  .ss-confirm[open] .ss-confirm__slip {
+    animation: ss-slip-in var(--motion-dur-base) var(--motion-ease-paper) both;
+  }
+  .ss-confirm__slip {
+    padding: 1.5rem 1.35rem 1.35rem;
+    border: var(--line-w) solid var(--ink);
+    border-radius: var(--r-card);
+    background-color: var(--paper-raised);
+    background-image: var(--texture-fibre), var(--texture-grain);
+    background-size:
+      400px 400px,
+      var(--texture-grain-size);
+    box-shadow: var(--elev-print), var(--elev-lifted);
+    transform: rotate(-0.6deg);
+  }
+  @keyframes ss-slip-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px) rotate(1deg);
+    }
+    to {
+      opacity: 1;
+      transform: rotate(-0.6deg);
+    }
+  }
+
+  /* ── Portal home: notice + stamp slots ────────────────────────────────── */
+  .ss-notice {
+    --tone: var(--accent-ochre-ink);
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: start;
+    padding: 1rem 1.1rem;
+    border-radius: var(--r-card);
+    border: var(--line-w) solid color-mix(in srgb, var(--tone) 70%, transparent);
+    background: color-mix(in srgb, var(--tone) 9%, var(--paper-raised));
+  }
+  .ss-notice[data-tone="sealed"] {
+    --tone: var(--postmark);
+  }
+  .ss-notice[data-tone="opened"] {
+    --tone: var(--accent-sage-ink);
+  }
+  .ss-notice__mark {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: var(--line-w) solid var(--tone);
+    border-radius: 50%;
+    color: var(--tone);
+  }
+  .ss-notice__title {
+    font-family: var(--ff-postal);
+    font-size: var(--text-postal);
+    font-weight: 700;
+    letter-spacing: var(--tracking-postal);
+    text-transform: uppercase;
+    color: var(--tone);
+  }
+  .ss-notice__body {
+    margin-top: 0.15rem;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+
+  .ss-slot {
+    position: relative;
+    display: block;
+    border-radius: var(--r-soft);
+    color: inherit;
+    text-decoration: none;
+    -webkit-touch-callout: none;
+  }
+  /* The stamp moves, the slot (and its link) stays put: a moving hit area would slide out from
+   * under the pointer at its edges and flicker. The stamp's own rotation is an inline transform,
+   * so these individual properties add to it. */
+  .ss-slot > :first-child {
+    transition:
+      translate var(--motion-dur-fast) var(--motion-ease-out),
+      rotate var(--motion-dur-fast) var(--motion-ease-out),
+      scale var(--motion-dur-fast) var(--motion-ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .ss-slot:hover > :first-child {
+      translate: 0 -3px;
+      rotate: -1.5deg;
+    }
+  }
+  .ss-slot:active > :first-child,
+  .ss-slot:has(.ss-slot__hit:active) > :first-child {
+    translate: 0 1px;
+    scale: 0.98;
+    transition-duration: 60ms;
+  }
+  /* Transparent hit area over the artwork (the link); the focus ring follows the stamp box. */
+  .ss-slot__hit {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: var(--r-soft);
+  }
+  .ss-slot__hit:focus-visible {
+    outline-offset: 6px;
+  }
+
+  .ss-slot__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    /* The empty frame pads its content by 0.5rem; win a little of it back for the hint. */
+    width: calc(100% + 0.6rem);
+    margin-inline: -0.3rem;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .ss-slot__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-family: var(--ff-postal);
+    font-size: var(--text-postal);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .ss-slot__plus {
+    display: grid;
+    place-items: center;
+    width: 1.15rem;
+    height: 1.15rem;
+    border: var(--line-w) solid currentColor;
+    border-radius: 50%;
+    color: var(--accent-terracotta-ink);
+  }
+  .ss-slot__hint {
+    font-family: var(--ff-hand);
+    font-size: 1rem;
+    line-height: 1.02;
+    color: var(--ink-faded);
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  /* The summary under a filled stamp: a little paper tag, tucked under its bottom edge. */
+  .ss-slot__tag {
+    position: absolute;
+    left: 50%;
+    bottom: -0.95rem;
+    z-index: 1;
+    max-width: 165%;
+    padding: 0.05rem 0.5rem 0.1rem;
+    border-radius: var(--r-paper);
+    background-color: var(--paper-raised);
+    background-image: var(--texture-grain);
+    background-size: var(--texture-grain-size);
+    box-shadow: var(--elev-stamp);
+    font-family: var(--ff-hand);
+    font-size: 1.125rem;
+    line-height: 1.2;
+    color: var(--ink-letter);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transform: translateX(-50%) rotate(-2deg);
+  }
+
+  /* Sealed ✓: a stamped badge in place of the button, not a control. */
+  .ss-sealed-badge {
+    display: inline-flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: var(--tap-min);
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--postmark);
+    border-radius: var(--r-paper);
+    color: var(--postmark);
+    font-family: var(--ff-postal);
+    font-size: 0.9375rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transform: rotate(-1.5deg);
+  }
+
+  /* ── Portal home: the envelope on a perforated sea "desk", and the checklist ── */
+  .ss-desk {
+    --perf: 7px;
+    position: relative;
+    padding: clamp(1.6rem, 1rem + 2vw, 2.75rem) clamp(1rem, 0.5rem + 2vw, 2rem);
+  }
+  .ss-desk::before {
+    content: "";
+    position: absolute;
+    top: -20%;
+    right: -20%;
+    width: 70%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgb(168 220 226 / 0.3) 0 40%, rgb(168 220 226 / 0) 70%);
+    pointer-events: none;
+  }
+  .ss-desk > * {
+    position: relative;
+  }
+
+  .ss-list {
+    overflow: hidden;
+    border-radius: var(--r-card);
+    background: var(--paper-raised);
+    box-shadow: var(--elev-card);
+  }
+  .ss-list > li + li {
+    border-top: 1.5px solid var(--paper-shadow);
+  }
+  .ss-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1.1rem;
+    color: inherit;
+    text-decoration: none;
+    transition: background-color var(--dur-ui) ease;
+  }
+  .ss-row__swatch {
+    --rp: 3px;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 3.2rem;
+    flex: none;
+    background-color: var(--world);
+    background-image: var(--texture-linen-light);
+    background-size: var(--texture-linen-size);
+    color: var(--ink);
+    font-family: var(--ff-display);
+    font-size: 0.8rem;
+    rotate: var(--tilt, -3deg);
+    transition:
+      rotate var(--dur-ui) var(--ease-out-strong),
+      translate var(--dur-ui) var(--ease-out-strong),
+      scale var(--dur-press) var(--ease-out-strong);
+  }
+  .ss-row__go {
+    flex: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--accent-red);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .ss-row:hover {
+      background: var(--paper);
+    }
+    .ss-row:hover .ss-row__swatch {
+      rotate: 4deg;
+      translate: 0 -2px;
+    }
+    .ss-row:hover .ss-row__go {
+      text-decoration-color: var(--ink);
+    }
+  }
+  .ss-row:active .ss-row__swatch {
+    scale: 0.94;
+  }
+
+  /* ── Photos ───────────────────────────────────────────────────────────── */
+  .ss-photo-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.75rem 1rem;
+    margin-top: 1.75rem;
+    list-style: none;
+    padding: 0;
+  }
+
+  .ss-photo {
+    position: relative;
+    min-width: 0;
+  }
+
+  .ss-photo__frame {
+    position: relative;
+  }
+
+  .ss-photo__remove {
+    position: absolute;
+    top: -0.7rem;
+    right: -0.55rem;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: var(--tap-min);
+    height: var(--tap-min);
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--ink);
+  }
+  .ss-photo__remove::before {
+    content: "";
+    position: absolute;
+    inset: 0.45rem;
+    z-index: -1;
+    border-radius: 50%;
+    background-color: var(--paper-raised);
+    box-shadow:
+      var(--elev-stamp),
+      inset 0 0 0 1px var(--paper-edge);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .ss-photo__remove:hover {
+      color: var(--danger);
+    }
+  }
+
+  /* A print that is still developing: blank paper, the photo fading up as it uploads. */
+  .ss-photo__pending {
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 4 / 5;
+    padding: 4.6%;
+    border-radius: 1.5px;
+    background-color: var(--paper-raised);
+    background-image: var(--texture-grain);
+    background-size: var(--texture-grain-size);
+    box-shadow: var(--elev-stamp);
+    overflow: hidden;
+  }
+  .ss-photo__ghost {
+    position: absolute;
+    inset: 4.6%;
+    width: calc(100% - 9.2%);
+    height: calc(100% - 9.2%);
+    object-fit: cover;
+    opacity: var(--develop, 0.2);
+    filter: saturate(0.6) sepia(0.35);
+    transition: opacity var(--motion-dur-base) var(--motion-ease-out);
+  }
+  .ss-photo__progress {
+    position: relative;
+    z-index: 1;
+  }
+  .ss-photo__progress .sd-progress__label {
+    max-width: 8.5rem;
+    text-align: center;
+  }
+  .ss-photo__failed {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem;
+    text-align: center;
+    color: var(--danger);
+  }
+  .ss-photo__failed p {
+    font-size: 0.875rem;
+    line-height: 1.35;
+  }
+  .ss-photo__failed .ss-photo__why {
+    color: var(--ink-soft);
+    font-size: 0.8125rem;
+  }
+
+  /* Caption written straight under the print, in the same hand the recipient sees. */
+  .ss-caption .sd-field__line {
+    padding: 0.1rem 0.2rem 0.15rem;
+    background: transparent;
+    box-shadow: inset 0 -1px 0 var(--paper-rule);
+  }
+  .ss-caption.sd-field:focus-within .sd-field__line {
+    background: color-mix(in srgb, var(--paper-raised) 70%, transparent);
+  }
+  .ss-caption .sd-field__control {
+    min-height: var(--tap-min);
+    font-size: 1.375rem;
+    line-height: 1.2;
+    text-align: center;
+  }
+  .ss-caption .sd-field__head {
+    justify-content: flex-end;
+  }
+
+  /* ── Letter: the stationery itself is the editor ─────────────────────── */
+  .sd-paper.ss-letter {
+    --margin-x: 1.6rem;
+    padding: 1.5rem 1rem 2.25rem 2.15rem;
+  }
+  @media (min-width: 400px) {
+    .sd-paper.ss-letter {
+      --margin-x: 2.1rem;
+      padding: 1.75rem 1.4rem 2.5rem 2.75rem;
+    }
+  }
+
+  .ss-letter .sd-field.ss-lf .sd-field__line,
+  .ss-letter .sd-field.ss-lf:focus-within .sd-field__line {
+    padding-inline: 0;
+    background: transparent;
+    box-shadow: inset 0 -1px 0 var(--paper-rule);
+  }
+  .ss-letter .sd-field.ss-lf--body .sd-field__line,
+  .ss-letter .sd-field.ss-lf--body:focus-within .sd-field__line {
+    box-shadow: none;
+  }
+  .ss-letter .sd-field.ss-lf .sd-field__control {
+    min-height: var(--rule-letter);
+    padding-block: 0;
+    line-height: var(--leading-letter);
+  }
+  .ss-letter textarea.sd-field__control {
+    padding-block: 0;
+    background-position: 0 0;
+    scroll-margin-bottom: 7rem;
+  }
+  .ss-letter .sd-field__prefix {
+    font-size: var(--text-letter);
+    line-height: var(--leading-letter);
+    color: var(--ink-letter);
+  }
+  .ss-letter .sd-field__control::placeholder {
+    color: var(--ink-faded);
+    opacity: 0.55;
+  }
+  /* "Dear ___," : the name field hugs its text, and the comma follows it like handwriting. */
+  .ss-letter .ss-lf--to .sd-field__prefix {
+    order: 1;
+  }
+  .ss-letter .ss-lf--to .sd-field__control {
+    order: 2;
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 3ch;
+    max-width: 100%;
+    field-sizing: content;
+  }
+  .ss-letter .ss-lf--to .sd-field__line::before {
+    content: ",";
+    order: 3;
+    margin-left: -0.4rem;
+    font-family: var(--ff-hand);
+    font-size: var(--text-letter);
+    line-height: var(--leading-letter);
+    color: var(--ink-letter);
+  }
+  .ss-letter .ss-lf--to .sd-field__line {
+    justify-content: flex-start;
+  }
+
+  .ss-letter__comma {
+    font-family: var(--ff-hand);
+    font-size: var(--text-letter);
+    line-height: var(--leading-letter);
+    color: var(--ink-letter);
+  }
+  .ss-letter .ss-lf--sig .sd-field__control {
+    font-size: 2rem;
+  }
+  .ss-letter .sd-field__head {
+    min-height: 0;
+  }
+
+  :lang(ja) .ss-letter .sd-field__control--hand,
+  :lang(zh) .ss-letter .sd-field__control--hand,
+  :lang(ru) .ss-letter .sd-field__control--hand,
+  :lang(ar) .ss-letter .sd-field__control--hand {
+    font-family: var(--ff-hand-fallback);
+  }
+
+  /* ── Voice ────────────────────────────────────────────────────────────── */
+  .ss-rec {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 7.5rem;
+    height: 7.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--ink-inverse);
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Plate + face: the same pressed-ink idea as InkButton, made round. */
+  .ss-rec::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--wax) 62%, var(--ink));
+    transform: translateY(4px);
+  }
+  .ss-rec__face {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 35% 30%, var(--wax-highlight), transparent 60%),
+      var(--wax);
+    box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--ink-inverse) 22%, transparent);
+    transition: transform var(--motion-dur-instant) var(--motion-ease-out);
+  }
+  .ss-rec:active:not(:disabled) .ss-rec__face {
+    transform: translateY(3px);
+  }
+  .ss-rec:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+  .ss-rec[data-state="recording"] .ss-rec__face {
+    background:
+      radial-gradient(circle at 35% 30%, var(--wax-highlight), transparent 60%),
+      var(--accent-red-ink);
+  }
+  /* A soft halo that breathes while recording (still under reduced motion). */
+  .ss-rec__halo {
+    position: absolute;
+    inset: -0.9rem;
+    border-radius: 50%;
+    background: var(--wax-glow);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .ss-rec[data-state="recording"] .ss-rec__halo {
+    opacity: 0.6;
+    animation: ss-breathe 1.6s var(--motion-ease-in-out) infinite alternate;
+  }
+  @keyframes ss-breathe {
+    from {
+      opacity: 0.25;
+      transform: scale(0.92);
+    }
+    to {
+      opacity: 0.7;
+      transform: scale(1.04);
+    }
+  }
+
+  .ss-clock {
+    font-family: var(--ff-postal);
+    font-size: 2.5rem;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .ss-clock[data-low="true"] {
+    color: var(--accent-red-ink);
+  }
+
+  .ss-wave {
+    display: block;
+    width: 100%;
+    height: 5.5rem;
+    color: var(--accent-sage-ink);
+  }
+
+  .ss-card {
+    padding: 1rem 1.1rem 1.1rem;
+    border-radius: var(--r-paper);
+    background-color: var(--paper-raised);
+    background-image: var(--texture-grain);
+    background-size: var(--texture-grain-size);
+    box-shadow: var(--elev-paper);
+  }
+  .ss-card[data-tone="warn"] {
+    box-shadow:
+      inset 3px 0 0 var(--accent-ochre-ink),
+      var(--elev-paper);
+  }
+  .ss-card[data-tone="error"] {
+    box-shadow:
+      inset 3px 0 0 var(--danger),
+      var(--elev-paper);
+  }
+
+  .ss-steps {
+    margin-top: 0.6rem;
+    padding-left: 1.25rem;
+    list-style: decimal;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .ss-steps li + li {
+    margin-top: 0.25rem;
+  }
+  .ss-steps strong {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* Simple accessible player (the custom animated skin is deferred). */
+  .ss-player {
+    display: grid;
+    /* minmax(0, …): the waveform's many bars must never set the column's width (on a 320px phone
+     * they pushed the bar, the scrubber and the duration off the screen) */
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.25rem 0.85rem;
+  }
+  .ss-player__btn {
+    display: grid;
+    place-items: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--accent-sage-ink);
+    color: var(--ink-inverse);
+  }
+  .ss-player__btn:active {
+    transform: scale(0.96);
+  }
+  .ss-player__bars {
+    display: flex;
+    align-items: center;
+    /* the gap shrinks with the width, so the whole recording always fits the row */
+    gap: min(1.5px, 0.45%);
+    min-width: 0;
+    height: 2.5rem;
+  }
+  .ss-player__bar {
+    flex: 1 1 0;
+    min-width: 0;
+    border-radius: 1px;
+    background: color-mix(in srgb, var(--accent-sage-ink) 35%, transparent);
+  }
+  .ss-player__bar[data-played="true"] {
+    background: var(--accent-sage-ink);
+  }
+  .ss-player__time {
+    grid-column: 2;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--ff-postal);
+    font-size: var(--text-postal);
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-faded);
+  }
+
+  .ss-range {
+    grid-column: 2;
+    width: 100%;
+    height: var(--tap-min);
+    margin: -0.6rem 0;
+    background: transparent;
+    accent-color: var(--accent-sage-ink);
+    cursor: pointer;
+  }
+
+  /* ── Song ─────────────────────────────────────────────────────────────── */
+  .ss-song-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1rem 1.25rem;
+  }
+  .ss-song-card__provider {
+    font-family: var(--ff-postal);
+    font-size: var(--text-postal);
+    letter-spacing: var(--tracking-postal);
+    text-transform: uppercase;
+    color: var(--accent-ochre-ink);
+  }
+
+  .ss-parse {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    min-height: 1.5rem;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+  .ss-parse[data-tone="ok"] {
+    color: var(--success);
+  }
+  .ss-parse[data-tone="warn"] {
+    color: var(--accent-ochre-ink);
+  }
+  .ss-parse[data-tone="error"] {
+    color: var(--danger);
+  }
+  .ss-parse svg {
+    flex: none;
+    margin-top: 0.1rem;
+  }
+
+  /* ── Seal & send ──────────────────────────────────────────────────────── */
+  .ss-seal-stage {
+    position: relative;
+    margin-inline: auto;
+    width: 100%;
+    max-width: 22rem;
+  }
+
+  .ss-hold {
+    position: absolute;
+    left: 50%;
+    z-index: 8;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    transform: translate(-50%, -50%);
+  }
+  .ss-hold:focus-visible {
+    outline-offset: 2px;
+    border-radius: 50%;
+  }
+  .ss-hold__ring {
+    position: absolute;
+    inset: 0;
+  }
+  .ss-hold__seal {
+    position: relative;
+    transition:
+      transform var(--motion-dur-slow) var(--motion-ease-out),
+      opacity var(--motion-dur-base) var(--motion-ease-out);
+  }
+  .ss-hold[data-state="holding"] .ss-hold__seal {
+    transform: scale(0.9);
+    transition-duration: var(--motion-dur-ceremony);
+  }
+  .ss-hold[data-state="pressed"] .ss-hold__seal {
+    opacity: 0;
+    transform: translateY(-10%) scale(1.05);
+  }
+  .ss-hold[data-state="pressed"] .ss-hold__ring {
+    opacity: 0;
+    transition: opacity var(--motion-dur-base) var(--motion-ease-out);
+  }
+  .ss-hold__tick {
+    opacity: 0.16;
+  }
+  .ss-hold__tick[data-on="true"] {
+    opacity: 1;
+  }
+
+  .ss-ghost-seal {
+    border-radius: 50%;
+    border: 2px dashed color-mix(in srgb, var(--wax) 55%, transparent);
+  }
+
+  .ss-postmark-land {
+    animation: ss-ink-hit 420ms var(--motion-ease-paper) both;
+  }
+  @keyframes ss-ink-hit {
+    0% {
+      opacity: 0;
+      transform: scale(1.5) rotate(4deg);
+    }
+    55% {
+      opacity: 1;
+      transform: scale(0.95) rotate(-1deg);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .ss-next {
+    counter-reset: next;
+    margin-top: 1rem;
+    list-style: none;
+    padding: 0;
+  }
+  .ss-next li {
+    counter-increment: next;
+    position: relative;
+    padding-left: 2.6rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .ss-next li + li {
+    margin-top: 0.85rem;
+  }
+  .ss-next li::before {
+    content: counter(next);
+    position: absolute;
+    left: 0;
+    top: -0.1rem;
+    display: grid;
+    place-items: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border: var(--line-w) solid var(--postmark);
+    border-radius: 50%;
+    font-family: var(--ff-postal);
+    font-size: 0.875rem;
+    color: var(--postmark);
+  }
+  .ss-next strong {
+    display: block;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* ── Reduced motion: things appear in place ───────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    html:not([data-motion="full"]) :is(.ss-rise, .ss-confirm__slip, .ss-postmark-land, .ss-rec__halo) {
+      animation: none !important;
+    }
+    html:not([data-motion="full"]) :is(.ss-slot > :first-child, .ss-hold__seal, .ss-dock, .ss-row__swatch) {
+      transition: none !important;
+    }
+    html:not([data-motion="full"]) .ss-slot:is(:hover, :active) > :first-child {
+      translate: none;
+      rotate: none;
+      scale: none;
+    }
+  }
+  html[data-motion="reduce"] :is(.ss-rise, .ss-confirm__slip, .ss-postmark-land, .ss-rec__halo) {
+    animation: none !important;
+  }
+  html[data-motion="reduce"] :is(.ss-slot > :first-child, .ss-hold__seal, .ss-dock, .ss-row__swatch) {
+    transition: none !important;
+  }
+  html[data-motion="reduce"] .ss-slot:is(:hover, :active) > :first-child {
+    translate: none;
+    rotate: none;
+    scale: none;
+  }
+}

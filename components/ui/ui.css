@@ -1,0 +1,510 @@
+/*
+ * UI primitives (InkButton/InkLink, Toaster, ProgressStamp, PaperLoader).
+ * Plain global CSS with an `sd-` prefix: the project's turbopack CSS rule disables CSS Modules.
+ * Tokens only. Motion: transform/opacity only; every loop has a still reduced-motion state.
+ */
+
+/* Same layer order as Tailwind v4, declared here too so it holds whichever stylesheet loads first.
+ * Component styles live in `components`, so Tailwind utilities passed via className win. */
+@layer theme, base, components, utilities;
+
+@layer components {
+  /* ── InkButton: a ticket with one clipped corner (the footer's shape, D-078) in the site's
+   * colours. Two clipped layers draw it: ::before is the outline (--line) and ::after the face
+   * (--face), inset by the line width, so the outline follows the cut corner too. The hard
+   * shadow is a drop-shadow, so it follows the cut as well. Motion (Emil Kowalski):
+   *   - hover (real pointers only): lifts off its shadow with a strong ease-out; the label rolls
+   *     over and the arrow's stem stretches (the footer's motion)
+   *   - press: lands (shadow collapses, scale 0.97) in 140ms, so the interface feels heard
+   * The button's own box never moves: only its drawn layers and face do, so its hit area stays
+   * under the pointer (no hover flicker at the edges, no press that slips off and loses the click).
+   * Only translate/scale/filter/background-color transition, never `all`. ─── */
+  .sd-ink {
+    --face: var(--accent-red);
+    --face-hover: var(--accent-red-ink);
+    --fg: var(--paper-raised);
+    --line: var(--ink);
+    --shade: var(--accent-navy);
+    --cut: 0.625rem;
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--tap-min);
+    margin: 0 3px 3px 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: var(--fg);
+    filter: drop-shadow(3px 3px 0 var(--shade));
+    font-family: var(--ff-ui);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.15;
+    text-decoration: none;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: filter var(--dur-ui) var(--ease-out-strong);
+  }
+  .sd-ink::before,
+  .sd-ink::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+  }
+  /* what moves on hover and press: the outline, the face and the label (never the hit box) */
+  .sd-ink::before,
+  .sd-ink::after,
+  .sd-ink__face {
+    transition:
+      translate var(--dur-ui) var(--ease-out-strong),
+      scale var(--dur-press) var(--ease-out-strong),
+      background-color var(--dur-ui) ease;
+  }
+  .sd-ink::before {
+    inset: 0;
+    background: var(--line);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%);
+  }
+  .sd-ink::after {
+    /* the same cut, moved in by the line width (an inset 45° cut is 2 − √2 line widths shorter) */
+    --cut-in: calc(var(--cut) - 0.586 * var(--line-w));
+    inset: var(--line-w);
+    background: var(--face);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--cut-in)), calc(100% - var(--cut-in)) 100%, 0 100%);
+  }
+
+  .sd-ink__face {
+    position: relative;
+    display: inline-flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6em;
+    min-height: inherit;
+    padding: 0.62rem 1.35rem;
+    text-align: center;
+  }
+
+  /* A label stays on one line while it fits; on a screen too narrow for it (a long label on a
+   * 320px phone) it wraps inside the button instead of running off the edge. */
+  .sd-ink {
+    max-width: 100%;
+  }
+  .sd-ink__label {
+    position: relative;
+    display: inline-block;
+    min-width: 0;
+    text-wrap: balance;
+  }
+  .sd-ink--sm .sd-ink__label {
+    white-space: nowrap;
+  }
+
+  .sd-ink__icon {
+    display: inline-flex;
+    flex: none;
+    margin-inline-start: -0.15em;
+  }
+
+  /* The footer's arrow: the stem stretches and the head steps forward */
+  .sd-ink__arrow {
+    flex: none;
+    width: 1.25em;
+    height: 1em;
+    margin-inline-end: -0.1em;
+    overflow: visible;
+  }
+  .sd-ink__stem {
+    transform-box: fill-box;
+    transform-origin: 0% 50%;
+    transition: scale 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .sd-ink__head {
+    transition: translate 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .sd-ink:hover:not(:disabled, [aria-disabled="true"]) {
+      --face: var(--face-hover);
+    }
+    /* the layers lift 2px while the shadow reaches 2px further, so the shadow stays where it was */
+    .sd-ink:not(.sd-ink--quiet):hover:not(:disabled, [aria-disabled="true"]) {
+      filter: drop-shadow(5px 5px 0 var(--shade));
+    }
+    .sd-ink:not(.sd-ink--quiet):hover:not(:disabled, [aria-disabled="true"])::before,
+    .sd-ink:not(.sd-ink--quiet):hover:not(:disabled, [aria-disabled="true"])::after,
+    .sd-ink:not(.sd-ink--quiet):hover:not(:disabled, [aria-disabled="true"]) .sd-ink__face {
+      translate: -2px -2px;
+    }
+    /* the label rolls over: out of the top, back in from below (the footer's roll) */
+    .sd-ink:not(.sd-ink--quiet):hover:not(:disabled, [aria-disabled="true"]) .sd-ink__label {
+      animation:
+        sd-roll-out 300ms ease forwards,
+        sd-roll-in 300ms ease 300ms forwards;
+    }
+    .sd-ink:hover .sd-ink__stem {
+      scale: 1.3 1;
+    }
+    .sd-ink:hover .sd-ink__head {
+      translate: 0.3em 0;
+    }
+  }
+  @keyframes sd-roll-out {
+    to {
+      opacity: 0;
+      transform: scaleY(1.25) translate3d(0, -28%, 0);
+    }
+  }
+  @keyframes sd-roll-in {
+    from {
+      opacity: 0;
+      transform: scaleY(1.25) translate3d(0, 28%, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* press: the layers land 2px down and in, and the shadow collapses under them */
+  .sd-ink:not(.sd-ink--quiet):active:not(:disabled, [aria-disabled="true"]) {
+    filter: drop-shadow(1px 1px 0 var(--shade));
+  }
+  .sd-ink:not(.sd-ink--quiet):active:not(:disabled, [aria-disabled="true"])::before,
+  .sd-ink:not(.sd-ink--quiet):active:not(:disabled, [aria-disabled="true"])::after,
+  .sd-ink:active:not(:disabled, [aria-disabled="true"]) .sd-ink__face {
+    translate: 2px 2px;
+    scale: 0.97;
+  }
+
+  .sd-ink:focus-visible {
+    outline-offset: 4px;
+    border-radius: 0;
+  }
+
+  .sd-ink:disabled,
+  .sd-ink[aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  /* Disabled: un-inked (paper on paper), still legible, no shadow. */
+  .sd-ink:disabled:not([aria-busy="true"]) {
+    --face: var(--paper-deep);
+    --fg: var(--ink-faded);
+    --line: var(--paper-edge);
+    filter: none;
+  }
+
+  /* Secondary: postcard white with a sepia outline */
+  .sd-ink--secondary {
+    --face: var(--paper-raised);
+    --face-hover: var(--paper);
+    --fg: var(--ink);
+  }
+
+  /* Ink: navy, with a coral shadow */
+  .sd-ink--ink {
+    --face: var(--accent-navy);
+    --face-hover: #2a4a7c;
+    --fg: var(--paper-raised);
+    --shade: var(--accent-red);
+  }
+
+  /* Paper: postcard white on colour fields, mustard shadow */
+  .sd-ink--paper {
+    --face: var(--paper-raised);
+    --face-hover: var(--paper);
+    --fg: var(--ink);
+    --shade: var(--accent-ochre);
+  }
+
+  .sd-ink--danger {
+    --face: var(--danger);
+    --face-hover: var(--accent-red-ink);
+  }
+
+  /* Quiet: an underlined text link (coral rule) with the arrow, still a 44px target */
+  .sd-ink--quiet {
+    --fg: var(--on, var(--ink));
+    margin: 0;
+    filter: none;
+    color: var(--fg);
+  }
+  .sd-ink--quiet::before,
+  .sd-ink--quiet::after {
+    content: none;
+  }
+  .sd-ink--quiet .sd-ink__face {
+    padding: 0.6rem 0.2rem;
+  }
+  .sd-ink--quiet .sd-ink__label {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.3em;
+    text-decoration-color: var(--accent-red);
+    transition: text-decoration-color var(--dur-ui) ease;
+  }
+  .sd-ink--quiet .sd-ink__arrow {
+    color: var(--accent-red);
+  }
+  :where(.band-cobalt, .band-sea, .band-ink) .sd-ink--quiet .sd-ink__label {
+    text-decoration-color: var(--accent-ochre);
+  }
+  :where(.band-cobalt, .band-sea, .band-ink) .sd-ink--quiet .sd-ink__arrow {
+    color: var(--accent-ochre);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sd-ink--quiet:hover .sd-ink__label {
+      text-decoration-color: currentColor;
+    }
+  }
+  .sd-ink--quiet:active:not(:disabled, [aria-disabled="true"]) .sd-ink__face {
+    translate: none;
+  }
+
+  /* On colour bands, the outlined button turns postcard-white with a mustard shadow */
+  :where(.band-cobalt, .band-sea, .band-ink) .sd-ink--secondary {
+    --line: var(--ink);
+    --shade: var(--accent-ochre);
+  }
+
+  .sd-ink--sm {
+    --cut: 0.5rem;
+    /* small in type, never below the 44px touch target */
+    min-height: var(--tap-min);
+    font-size: 0.95rem;
+  }
+  .sd-ink--sm .sd-ink__face {
+    padding: 0.5rem 1.05rem;
+  }
+  .sd-ink--lg {
+    --cut: 0.75rem;
+    min-height: 3.25rem;
+    font-size: 1.0625rem;
+  }
+  .sd-ink--lg .sd-ink__face {
+    padding: 0.85rem 1.7rem;
+  }
+
+  .sd-ink--full {
+    display: flex;
+    width: calc(100% - 3px);
+  }
+  .sd-ink--quiet.sd-ink--full {
+    width: 100%;
+  }
+
+  /* Loading: a small postmark ring turning, in place of the icon. */
+  .sd-ink__spin {
+    width: 1.05em;
+    height: 1.05em;
+    flex: none;
+    animation: sd-turn 1.1s linear infinite;
+  }
+
+  @keyframes sd-turn {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  /* ── Toaster: postal slips, ink-bordered, with a coloured stamp stub ─────────── */
+  .sd-toaster {
+    position: fixed;
+    inset-inline: 0;
+    /* Pages with a pinned bottom bar raise this (e.g. the sender's Save dock). */
+    bottom: var(--toast-offset, 0px);
+    z-index: var(--z-toast);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0 var(--gutter) max(var(--gutter), calc(env(safe-area-inset-bottom) + 0.75rem));
+    list-style: none;
+    pointer-events: none;
+  }
+
+  .sd-toast {
+    width: 100%;
+    max-width: 26rem;
+    pointer-events: auto;
+  }
+
+  .sd-toast__slip {
+    display: grid;
+    grid-template-columns: 3.25rem 1fr auto;
+    align-items: stretch;
+    min-height: 3.75rem;
+    overflow: hidden;
+    border: var(--line-w) solid var(--ink);
+    border-radius: var(--r-card);
+    background-color: var(--paper-raised);
+    color: var(--ink);
+    box-shadow: var(--elev-print-sm);
+  }
+
+  .sd-toast__stub {
+    display: grid;
+    place-items: center;
+    border-inline-end: var(--line-w) solid var(--ink);
+    background: color-mix(in srgb, var(--tone) 18%, var(--paper-raised));
+    color: var(--tone);
+  }
+
+  .sd-toast__text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.1rem;
+    padding: 0.65rem 0.25rem 0.7rem 0.9rem;
+    min-width: 0;
+  }
+
+  .sd-toast__title {
+    font-family: var(--ff-ui);
+    font-size: 0.975rem;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .sd-toast__body {
+    font-family: var(--ff-ui);
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--ink-soft);
+  }
+
+  .sd-toast__close {
+    display: grid;
+    place-items: center;
+    align-self: center;
+    width: var(--tap-min);
+    height: var(--tap-min);
+    margin-inline-end: 0.25rem;
+    border: 0;
+    border-radius: var(--r-soft);
+    background: none;
+    color: var(--ink-faded);
+  }
+  .sd-toast__close:hover {
+    color: var(--ink);
+  }
+
+  /* ── ProgressStamp: a cancellation ring inked tick by tick ─────────────── */
+  .sd-progress {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--postmark);
+  }
+
+  .sd-progress__svg {
+    display: block;
+    overflow: visible;
+  }
+
+  .sd-progress__tick {
+    opacity: 0.16;
+    transition: opacity var(--motion-dur-fast) var(--motion-ease-out);
+  }
+  .sd-progress__tick[data-on="true"] {
+    opacity: 0.95;
+  }
+
+  .sd-progress__sweep {
+    transform-box: view-box;
+    transform-origin: 50% 50%;
+    animation: sd-turn 1.8s linear infinite;
+  }
+
+  .sd-progress__value {
+    font-family: var(--ff-postal);
+    letter-spacing: 0.04em;
+  }
+
+  .sd-progress__label {
+    font-family: var(--ff-postal);
+    font-size: var(--text-postal);
+    letter-spacing: var(--tracking-postal);
+    text-transform: uppercase;
+    color: var(--ink-faded);
+    text-align: center;
+  }
+
+  .sd-progress__done {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: sd-stamp-in var(--motion-dur-base) var(--motion-ease-paper) both;
+  }
+
+  @keyframes sd-stamp-in {
+    from {
+      opacity: 0;
+      transform: scale(1.5) rotate(-12deg);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+  }
+
+  /* ── PaperLoader: an ink dot travelling a postmark ring ────────────────── */
+  .sd-loader {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--postmark);
+  }
+
+  .sd-loader__orbit {
+    transform-box: view-box;
+    transform-origin: 50% 50%;
+    animation: sd-turn 2.4s var(--motion-ease-in-out) infinite;
+  }
+
+  .sd-loader__dot {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: sd-pulse 1.2s var(--motion-ease-in-out) infinite alternate;
+  }
+
+  @keyframes sd-pulse {
+    from {
+      opacity: 0.55;
+      transform: scale(0.7);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+  }
+
+  /* UI face, not the pen: the pen face keeps "…" in a separate 23 KB chunk, and this label is
+   * on the recipient's critical path. */
+  .sd-loader__label {
+    font-family: var(--ff-ui);
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--ink-soft);
+  }
+
+  /* Reduced motion: loops stop; the still frame is the designed state. */
+  @media (prefers-reduced-motion: reduce) {
+    html:not([data-motion="full"]) :is(.sd-ink__spin, .sd-progress__sweep, .sd-loader__orbit, .sd-loader__dot) {
+      animation: none !important;
+    }
+  }
+  html[data-motion="reduce"] :is(.sd-ink__spin, .sd-progress__sweep, .sd-loader__orbit, .sd-loader__dot) {
+    animation: none !important;
+  }
+}

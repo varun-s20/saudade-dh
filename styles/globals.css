@@ -1,0 +1,698 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+/*
+ * Tailwind v4 theme → CSS-variable tokens. `inline` makes utilities reference the token
+ * variables directly, so a rebrand only touches styles/tokens.css.
+ */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-paper-deep: var(--paper-deep);
+  --color-paper-shadow: var(--paper-shadow);
+  --color-paper-edge: var(--paper-edge);
+  --color-paper-liner: var(--paper-liner);
+
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faded: var(--ink-faded);
+  --color-ink-inverse: var(--ink-inverse);
+  --color-ink-letter: var(--ink-letter);
+
+  --color-postmark: var(--postmark);
+  --color-postmark-faded: var(--postmark-faded);
+
+  --color-terracotta: var(--accent-terracotta);
+  --color-terracotta-ink: var(--accent-terracotta-ink);
+  --color-dusty-blue: var(--accent-dusty-blue);
+  --color-dusty-blue-ink: var(--accent-dusty-blue-ink);
+  --color-sage: var(--accent-sage);
+  --color-sage-ink: var(--accent-sage-ink);
+  --color-rose: var(--accent-rose);
+  --color-rose-ink: var(--accent-rose-ink);
+  --color-red: var(--accent-red);
+  --color-red-ink: var(--accent-red-ink);
+  --color-ochre: var(--accent-ochre);
+  --color-ochre-ink: var(--accent-ochre-ink);
+  --color-cobalt: var(--accent-cobalt);
+  --color-cobalt-deep: var(--accent-cobalt-deep);
+  --color-vermilion: var(--accent-vermilion);
+  --color-lilac: var(--accent-lilac);
+  --color-navy: var(--accent-navy);
+  --color-sky: var(--accent-sky);
+  --color-palm: var(--accent-palm);
+
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+
+  --color-wax: var(--wax);
+  --color-wax-highlight: var(--wax-highlight);
+  --color-wax-shadow: var(--wax-shadow);
+  --color-vinyl: var(--vinyl);
+  --color-vinyl-groove: var(--vinyl-groove);
+  --color-desk: var(--desk);
+
+  --color-admin-bg: var(--admin-bg);
+  --color-admin-surface: var(--admin-surface);
+  --color-admin-line: var(--admin-line);
+  --color-admin-ink: var(--admin-ink);
+  --color-admin-ink-soft: var(--admin-ink-soft);
+
+  --color-focus: var(--focus-ring);
+
+  --font-display: var(--ff-display);
+  --font-script: var(--ff-script);
+  --font-hand: var(--ff-hand);
+  --font-postal: var(--ff-postal);
+  --font-ui: var(--ff-ui);
+  --font-sans: var(--ff-ui);
+
+  --text-mega: var(--fs-mega);
+  --text-hero: var(--fs-hero);
+  --text-d1: var(--fs-d1);
+  --text-d2: var(--fs-d2);
+  --text-d3: var(--fs-d3);
+  --text-lede: var(--fs-lede);
+  --text-script: var(--fs-script);
+
+  --radius-paper: var(--r-paper);
+  --radius-soft: var(--r-soft);
+  --radius-card: var(--r-card);
+  --radius-sheet: var(--r-sheet);
+  --radius-pill: var(--r-pill);
+
+  --shadow-flat: var(--elev-flat);
+  --shadow-paper: var(--elev-paper);
+  --shadow-stamp: var(--elev-stamp);
+  --shadow-lifted: var(--elev-lifted);
+  --shadow-envelope: var(--elev-envelope);
+  --shadow-sheet: var(--elev-sheet);
+  --shadow-print: var(--elev-print);
+  --shadow-print-sm: var(--elev-print-sm);
+  --shadow-extrude: var(--elev-extrude);
+  --shadow-card: var(--elev-card);
+
+  --ease-out-soft: var(--motion-ease-out);
+  --ease-in-out-soft: var(--motion-ease-in-out);
+  --ease-paper: var(--motion-ease-paper);
+  --ease-press: var(--motion-ease-press);
+  --ease-out-strong: var(--ease-out-strong);
+}
+
+/* ── Base ─────────────────────────────────────────────────── */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    /* Display, script and pen faces have one weight: never fake-bold them. */
+    font-synthesis: style;
+  }
+  /* Big monitors: past 1600px the whole design (sized in rem) grows with the screen, up to 125%
+   * at 2560px, so it fills a monitor instead of floating in a narrow column. In rem, so a
+   * reader's own font-size setting still counts. */
+  @media (min-width: 100rem) {
+    html {
+      font-size: clamp(1rem, calc(1rem + (100vw - 100rem) * 0.00417), 1.25rem);
+    }
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--paper);
+    background-image: var(--texture-linen), var(--texture-grain);
+    background-size:
+      var(--texture-linen-size),
+      var(--texture-grain-size);
+    color: var(--ink);
+    font-family: var(--ff-ui);
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+
+  :where(h1, h2, h3, h4) {
+    text-wrap: balance;
+  }
+  :where(p, li, figcaption) {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: var(--accent-ochre);
+    color: var(--ink);
+  }
+
+  /* Focus: a turquoise ring, offset from the card, never removed (paper-white on dark bands). */
+  :focus-visible {
+    outline: 2.5px solid var(--focus-ring);
+    outline-offset: 3px;
+    border-radius: var(--r-soft);
+  }
+
+  /* The postcard pairing: inside block capitals, an <em> is written in the script hand,
+   * like "Greetings from" sitting on the big letters. Zero specificity, so utilities win. */
+  :where(.display, .ss-title, .font-display) :where(em, i) {
+    font-family: var(--ff-script);
+    font-style: normal;
+    font-weight: 400;
+    font-size: 1.12em;
+    line-height: 0.8;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--accent-red);
+  }
+  :where(.band-cobalt, .band-ink, .band-sky, .band-sea) :where(.display, .ss-title, .font-display) :where(em, i) {
+    color: var(--accent-ochre);
+  }
+  :where(.display-plain) :where(em, i) {
+    font-family: var(--ff-script);
+    font-style: normal;
+    font-weight: 400;
+    font-size: 1.15em;
+    line-height: 0.8;
+    color: var(--accent-red);
+  }
+
+  button,
+  [role="button"] {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  :where(button, a, input, textarea, select):disabled {
+    cursor: not-allowed;
+  }
+}
+
+/* ── Paper ─────────────────────────────────────────────────── */
+@utility paper-grain {
+  background-image: var(--texture-grain);
+  background-size: var(--texture-grain-size);
+}
+
+@utility paper-fibre {
+  background-image: var(--texture-fibre), var(--texture-grain);
+  background-size:
+    400px 400px,
+    var(--texture-grain-size);
+}
+
+@utility linen {
+  background-image: var(--texture-linen);
+  background-size: var(--texture-linen-size);
+}
+
+/* ── Layout ────────────────────────────────────────────────── */
+@utility wrap {
+  width: 100%;
+  max-width: calc(var(--measure-page) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+@utility section-y {
+  padding-block: var(--section-y);
+}
+
+/* ── Type ──────────────────────────────────────────────────── */
+
+/* Large-letter block capitals (Bowlby One). An <em> inside switches to the script hand. */
+@utility display {
+  font-family: var(--ff-display);
+  font-weight: 400;
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+}
+
+/* "Greetings from…": the script hand */
+@utility script {
+  font-family: var(--ff-script);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Kept for older screens: big, regular-weight UI headline */
+@utility display-plain {
+  font-family: var(--ff-ui);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+
+/* Typewritten caption above headings ("No. 2 · Correspondence"), like a postcard back */
+@utility eyebrow {
+  font-family: var(--ff-postal);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+/* Older name for the same typewritten label */
+@utility marker {
+  font-family: var(--ff-postal);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@utility postal-label {
+  font-family: var(--ff-postal);
+  font-size: var(--text-postal);
+  letter-spacing: var(--tracking-postal);
+  text-transform: uppercase;
+}
+
+/* An airmail label: a typewritten slip edged in red-and-navy airmail stripes, with a hairline
+ * frame printed inside (D-078; it replaced a pill). --tag-face sets the slip's colour. */
+@utility tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  max-width: 100%;
+  padding: 0.5em 1em 0.46em;
+  border: 4px solid transparent;
+  border-radius: 2px;
+  background:
+    linear-gradient(var(--tag-face, var(--paper-raised)) 0 0) padding-box,
+    repeating-linear-gradient(-45deg, var(--accent-red) 0 6px, transparent 6px 10px, var(--accent-navy) 10px 16px, transparent 16px 20px) border-box,
+    linear-gradient(var(--paper-raised) 0 0) border-box;
+  outline: 1px solid color-mix(in srgb, var(--accent-navy) 35%, transparent);
+  outline-offset: -3px;
+  box-shadow: 0 1px 0 rgb(47 35 27 / 0.1), 0 6px 12px -6px rgb(47 35 27 / 0.35);
+  color: var(--accent-navy);
+  font-family: var(--ff-postal);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+/* ── Colour fields ─────────────────────────────────────────── */
+
+/* Linen-postcard sky: turquoise into a pale horizon, rays and weave */
+@utility band-sky {
+  background-color: var(--accent-sky);
+  background-image: var(--texture-linen-light), var(--texture-rays), var(--grad-sky);
+  background-size:
+    var(--texture-linen-size),
+    100% 100%,
+    100% 100%;
+  color: var(--ink);
+}
+
+/* Sunset: mustard into coral */
+@utility band-sunset {
+  background-color: var(--accent-terracotta);
+  background-image: var(--texture-linen-light), var(--texture-rays), var(--grad-sunset);
+  background-size:
+    var(--texture-linen-size),
+    100% 100%,
+    100% 100%;
+  color: var(--ink);
+}
+@utility band-dusk {
+  background-color: var(--accent-terracotta);
+  background-image: var(--texture-linen-light), var(--grad-sunset);
+  background-size:
+    var(--texture-linen-size),
+    100% 100%;
+  color: var(--ink);
+}
+
+/* Deep turquoise sea: paper-white text, mustard accents, white focus ring */
+@utility band-cobalt {
+  background-color: var(--accent-cobalt);
+  background-image: var(--texture-linen-light), var(--grad-sea);
+  background-size:
+    var(--texture-linen-size),
+    100% 100%;
+  color: var(--paper);
+  --focus-ring: var(--paper-raised);
+  --on: var(--paper-raised);
+}
+@utility band-sea {
+  background-color: var(--accent-cobalt);
+  background-image: var(--texture-linen-light), var(--grad-sea);
+  background-size:
+    var(--texture-linen-size),
+    100% 100%;
+  color: var(--paper);
+  --focus-ring: var(--paper-raised);
+  --on: var(--paper-raised);
+}
+@utility band-ink {
+  background-color: var(--accent-navy);
+  background-image: var(--texture-linen-light);
+  background-size: var(--texture-linen-size);
+  color: var(--paper);
+  --focus-ring: var(--paper-raised);
+  --on: var(--paper-raised);
+}
+
+/* Stamp perforations along a band's top and bottom edges */
+@utility perf-edge {
+  -webkit-mask:
+    radial-gradient(circle at 50% 0, transparent var(--perf), #000 calc(var(--perf) + 0.5px)) top / calc(var(--perf) * 3) 51% repeat-x,
+    radial-gradient(circle at 50% 100%, transparent var(--perf), #000 calc(var(--perf) + 0.5px)) bottom / calc(var(--perf) * 3) 51% repeat-x;
+  mask:
+    radial-gradient(circle at 50% 0, transparent var(--perf), #000 calc(var(--perf) + 0.5px)) top / calc(var(--perf) * 3) 51% repeat-x,
+    radial-gradient(circle at 50% 100%, transparent var(--perf), #000 calc(var(--perf) + 0.5px)) bottom / calc(var(--perf) * 3) 51% repeat-x;
+}
+
+@utility riso {
+  background-image: var(--texture-riso);
+  background-size: 180px 180px;
+}
+@utility grid-paper {
+  background-image: var(--texture-grid);
+  background-size: var(--texture-grid-size);
+}
+@utility halftone {
+  background-image: var(--texture-halftone);
+  background-size: var(--texture-halftone-size);
+}
+@utility tile-ink {
+  background-image: var(--texture-linen);
+  background-size: var(--texture-linen-size);
+}
+@utility waves {
+  background-image: var(--texture-linen);
+  background-size: var(--texture-linen-size);
+}
+@utility airmail-edge {
+  border: 8px solid transparent;
+  border-image: var(--texture-airmail) 8;
+}
+
+/* ── Cards ─────────────────────────────────────────────────── */
+
+/* A postcard picture: white border, softly rounded corners, resting on the desk */
+@utility postcard {
+  padding: var(--border-card);
+  border-radius: var(--r-card);
+  background: var(--paper-raised);
+  box-shadow: var(--elev-card);
+}
+
+/* A framed card: ink outline, rounded, a hard navy shadow (the gumroad.com reference) */
+@utility frame {
+  border: var(--line-w) solid var(--ink);
+  border-radius: var(--r-card);
+  background-color: var(--paper-raised);
+  box-shadow: var(--elev-print);
+}
+
+@utility extrude {
+  border: var(--line-w) solid var(--ink);
+  border-radius: var(--r-card);
+  box-shadow: var(--elev-extrude);
+}
+
+/* Older shapes, kept for screens that still use them */
+@utility chamfer {
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+}
+@utility notch {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--notch)), calc(100% - var(--notch)) 100%, 0 100%);
+}
+
+/* ── Interaction (Emil Kowalski) ───────────────────────────── */
+
+/* Anything pressable answers the press: a quick, subtle scale. */
+@utility press {
+  transition: transform var(--dur-press) var(--ease-out-strong);
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+/* Lift onto a hard navy shadow on hover (gumroad.com); pressing lands it. Hover only for mice. */
+@utility lift {
+  transition:
+    translate var(--dur-ui) var(--ease-out-strong),
+    box-shadow var(--dur-ui) var(--ease-out-strong),
+    scale var(--dur-press) var(--ease-out-strong);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      translate: -2px -2px;
+      box-shadow: 5px 5px 0 var(--lift-c, var(--accent-navy));
+    }
+  }
+  &:active {
+    translate: 0 0;
+    scale: 0.97;
+    box-shadow: 1px 1px 0 var(--lift-c, var(--accent-navy));
+  }
+}
+
+/* Older names, mapped to the same lift */
+@utility lift-double {
+  transition:
+    translate var(--dur-ui) var(--ease-out-strong),
+    box-shadow var(--dur-ui) var(--ease-out-strong);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      translate: -2px -2px;
+      box-shadow: 5px 5px 0 var(--lift-c, var(--accent-navy));
+    }
+  }
+}
+
+/* A stamp peeling up at one corner when the pointer touches it. The hover is read from its
+ * parent, which stays put: if the stamp itself were the hover target, lifting and turning would
+ * slide its edge out from under the pointer, end the hover, drop it back under the pointer and
+ * start again (a jitter at the edges). */
+@utility peel {
+  transition:
+    rotate var(--dur-ui) var(--ease-out-strong),
+    translate var(--dur-ui) var(--ease-out-strong),
+    filter var(--dur-ui) ease;
+  @media (hover: hover) and (pointer: fine) {
+    :hover > & {
+      rotate: -3deg;
+      translate: 0 -4px;
+      filter: drop-shadow(0 10px 10px rgb(47 35 27 / 0.22));
+    }
+  }
+}
+@utility wobble {
+  transition: rotate var(--dur-ui) var(--ease-out-strong);
+  @media (hover: hover) and (pointer: fine) {
+    :hover > & {
+      rotate: -4deg;
+    }
+  }
+}
+
+/* gumroad.com: scroll-driven drift (a view timeline); objects sit still where unsupported */
+@utility drift {
+  @supports (animation-timeline: view()) {
+    animation: sd-drift linear both;
+    animation-timeline: view();
+    animation-range: entry 0% exit 100%;
+  }
+}
+
+/* A headline inked on by a roller (top to bottom), then its script word written on after it.
+ * Once, on load (a first-view moment, so it may take its time); reduced motion: no movement. */
+@utility ink-in {
+  animation: sd-roll 760ms var(--ease-in-out-strong) 80ms backwards;
+  & :where(em, i) {
+    display: inline-block;
+    padding-inline: 0.04em;
+    animation: sd-write 900ms cubic-bezier(0.45, 0.05, 0.4, 1) 620ms backwards;
+  }
+}
+
+/* A perforated stamp edge on all four sides (set --rp for the hole radius) */
+@utility perforated {
+  -webkit-mask:
+    radial-gradient(var(--rp, 3px), #0000 98%, #000) round calc(-1.5 * var(--rp, 3px)) calc(-1.5 * var(--rp, 3px)) / calc(3 * var(--rp, 3px)) calc(3 * var(--rp, 3px)),
+    linear-gradient(#000 0 0) no-repeat 50% / calc(100% - 3 * var(--rp, 3px)) calc(100% - 3 * var(--rp, 3px));
+  mask:
+    radial-gradient(var(--rp, 3px), #0000 98%, #000) round calc(-1.5 * var(--rp, 3px)) calc(-1.5 * var(--rp, 3px)) / calc(3 * var(--rp, 3px)) calc(3 * var(--rp, 3px)),
+    linear-gradient(#000 0 0) no-repeat 50% / calc(100% - 3 * var(--rp, 3px)) calc(100% - 3 * var(--rp, 3px));
+}
+
+/* Bars that bounce on their baseline (voice waveforms) */
+@utility bounce-bars {
+  & > * {
+    transform-origin: 50% 100%;
+    animation: sd-bar 1.5s var(--motion-ease-in-out) infinite;
+    animation-delay: calc(var(--i, 0) * -110ms);
+  }
+}
+
+@keyframes sd-drift {
+  from {
+    translate: 0 var(--drift, 3rem);
+  }
+  to {
+    translate: 0 calc(var(--drift, 3rem) * -1);
+  }
+}
+@keyframes sd-roll {
+  from {
+    clip-path: inset(0 0 100% 0);
+    transform: translateY(0.16em);
+  }
+  to {
+    clip-path: inset(-0.4em -0.4em -0.5em -0.4em);
+    transform: none;
+  }
+}
+@keyframes sd-write {
+  from {
+    clip-path: inset(-0.5em 100% -0.5em -0.2em);
+  }
+  to {
+    clip-path: inset(-0.5em -0.5em -0.5em -0.2em);
+  }
+}
+@keyframes sd-bar {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  40% {
+    transform: scaleY(1.22);
+  }
+  70% {
+    transform: scaleY(0.82);
+  }
+}
+
+/* ── In-view reveals (<InView>): armed after hydration, released by an IntersectionObserver.
+ * Entering = ease-out; nothing grows from nothing (scale ≥ 0.92); stagger 40–60ms. ──────── */
+@layer components {
+  /* clip a picture up from its bottom edge */
+  .iv-clip[data-armed]:not([data-in]) {
+    clip-path: inset(0 0 100% 0);
+  }
+  .iv-clip[data-in] {
+    clip-path: inset(0 0 0 0);
+    transition: clip-path 900ms var(--ease-in-out-strong) var(--iv-delay, 0ms);
+  }
+  /* written on, left to right, at handwriting speed */
+  .iv-write[data-armed]:not([data-in]) {
+    clip-path: inset(-0.3em 100% -0.3em -0.3em);
+  }
+  .iv-write[data-in] {
+    clip-path: inset(-0.3em -0.3em -0.3em -0.3em);
+    transition: clip-path var(--write-dur, 1300ms) cubic-bezier(0.45, 0.05, 0.4, 1) var(--iv-delay, 0ms);
+  }
+  /* children land like stickers, one after another */
+  .iv-stick[data-armed]:not([data-in]) > * {
+    opacity: 0;
+    transform: translateY(14px) scale(0.92) rotate(var(--tilt-in, -6deg));
+  }
+  .iv-stick[data-in] > * {
+    transition:
+      opacity 260ms ease,
+      transform 520ms var(--ease-settle);
+    transition-delay: calc(var(--iv-delay, 0ms) + var(--i, 0) * 55ms);
+  }
+  /* a rubber stamp coming down: big and turned, then pressed flat */
+  .iv-thunk[data-armed]:not([data-in]) {
+    opacity: 0;
+    transform: scale(1.45) rotate(-16deg);
+  }
+  .iv-thunk[data-in] {
+    transition:
+      opacity 120ms ease var(--iv-delay, 0ms),
+      transform 380ms var(--ease-out-strong) var(--iv-delay, 0ms);
+  }
+  /* children rise into place */
+  .iv-rise[data-armed]:not([data-in]) > * {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  .iv-rise[data-in] > * {
+    transition:
+      opacity 500ms ease,
+      transform 700ms var(--ease-out-strong);
+    transition-delay: calc(var(--iv-delay, 0ms) + var(--i, 0) * 60ms);
+  }
+}
+
+/* ── Utilities ─────────────────────────────────────────────── */
+@utility tap-target {
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+}
+
+@utility phone-column {
+  width: 100%;
+  max-width: var(--measure-phone);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+@utility safe-bottom {
+  padding-bottom: max(var(--gutter), env(safe-area-inset-bottom));
+}
+
+@utility sr-only-focusable {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  &:focus,
+  &:focus-within {
+    position: static;
+    width: auto;
+    height: auto;
+    clip: auto;
+    white-space: normal;
+  }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────
+ * System preference OR the Demo Panel override (<html data-motion="reduce">). Movement goes;
+ * gentle opacity stays (in-view pieces simply fade). JS reads the same preference via
+ * lib/hooks/useReducedMotionPref.
+ */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="full"]) *,
+  html:not([data-motion="full"]) *::before,
+  html:not([data-motion="full"]) *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+  html:not([data-motion="full"]) :is(.drift, .bounce-bars > *) {
+    animation: none !important;
+  }
+}
+
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
+}
+html[data-motion="reduce"] :is(.drift, .bounce-bars > *) {
+  animation: none !important;
+}
+
+@theme inline {
+  --color-paper-rule: var(--paper-rule);
+  --color-paper-rule-margin: var(--paper-rule-margin);
+  --color-paper-foxing: var(--paper-foxing);
+  --color-wax-glow: var(--wax-glow);
+}
+

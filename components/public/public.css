@@ -1,0 +1,344 @@
+/*
+ * Public pages: shell (header, menu), the footer, and pieces shared by the public pages.
+ * Prefixed global CSS (`pub-`, `ft-`, `ti-`) in @layer components so Tailwind utilities on the
+ * same elements still win. Motion follows Emil Kowalski's rules: ease-out for entering and
+ * responding, short durations, hover only for real pointers, transforms/opacity/clip-path only.
+ */
+@layer theme, base, components, utilities;
+
+@layer components {
+  /* ── Smooth scrolling (Lenis's stylesheet, inlined so it ships with the public CSS) ── */
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+  .lenis:not(.lenis-autoToggle).lenis-stopped {
+    overflow: clip;
+  }
+  .lenis [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+  .lenis.lenis-smooth iframe {
+    pointer-events: none;
+  }
+
+  /* ── Header: transparent over the page's band at the top, a linen bar once scrolled ── */
+  .pub-shell {
+    --head-h: 4rem;
+  }
+  @media (min-width: 48rem) {
+    .pub-shell {
+      --head-h: 4.75rem;
+    }
+  }
+  /* The page slides up under the header, so its first band shows through at the top. */
+  .pub-main {
+    margin-top: calc(-1 * (var(--head-h) + env(safe-area-inset-top)));
+  }
+  .pub-head {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-header);
+    padding-top: env(safe-area-inset-top);
+    border-bottom: 1.5px solid transparent;
+    background-color: transparent;
+    color: var(--ink);
+    transition:
+      background-color 240ms ease,
+      border-color 240ms ease,
+      color 240ms ease;
+  }
+  .pub-head[data-scrolled],
+  .pub-head:has(.pub-menu:not([hidden])) {
+    border-bottom-color: var(--paper-shadow);
+    background-color: color-mix(in srgb, var(--paper) 94%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  .pub-head[data-tone="light"]:not([data-scrolled]):not(:has(.pub-menu:not([hidden]))) {
+    --focus-ring: var(--paper-raised);
+    color: var(--paper-raised);
+  }
+  .pub-nav {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min);
+    padding: 0 0.85rem;
+    white-space: nowrap;
+    color: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  /* 1024 to 1279px: the nav and the right-hand links share a tight bar */
+  @media (min-width: 64rem) and (max-width: 79.99rem) {
+    .pub-nav {
+      padding-inline: 0.55rem;
+    }
+  }
+  .pub-nav > span {
+    position: relative;
+  }
+  /* the narrowest phones: the header button drops its arrow so the logo keeps its room */
+  @media (max-width: 23.99rem) {
+    .pub-cta .sd-ink__arrow {
+      display: none;
+    }
+    .pub-cta .sd-ink__face {
+      padding-inline: 0.8rem;
+    }
+  }
+  /* The underline is drawn on from the left (clip-path), and wiped off fast. */
+  .pub-nav > span::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -4px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent-red);
+    clip-path: inset(0 100% 0 0);
+    transition: clip-path 160ms ease-out;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .pub-nav:hover > span::after {
+      clip-path: inset(0 0 0 0);
+      transition-duration: 260ms;
+      transition-timing-function: var(--ease-out-strong);
+    }
+  }
+
+  /* Mobile menu panel: drops in from the header (it opens occasionally, so it may animate) */
+  .pub-menu {
+    transition:
+      opacity 180ms ease,
+      transform 240ms var(--ease-out-strong);
+    transform-origin: 50% 0;
+    @starting-style {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
+
+  /* ── Tap illustration loop (help page; a gumroad.com-style character loop) ─ */
+  .ti-phone {
+    animation: ti-approach 4.2s var(--motion-ease-in-out) infinite;
+  }
+  .ti-phone--back {
+    animation-name: ti-approach-back;
+  }
+  @keyframes ti-approach {
+    0% {
+      transform: translateY(34px);
+    }
+    30%,
+    84% {
+      transform: translateY(0);
+    }
+    100% {
+      transform: translateY(34px);
+    }
+  }
+  @keyframes ti-approach-back {
+    0% {
+      transform: translate(-26px, 18px) rotate(-4deg);
+    }
+    30%,
+    84% {
+      transform: none;
+    }
+    100% {
+      transform: translate(-26px, 18px) rotate(-4deg);
+    }
+  }
+  .ti-waves,
+  .ti-ring {
+    transform-box: fill-box;
+    transform-origin: 50% 0%;
+    animation: ti-pulse 4.2s ease-out infinite;
+  }
+  .ti-ring {
+    transform-origin: center;
+  }
+  .ti-ring--2 {
+    animation-delay: 0.25s;
+  }
+  @keyframes ti-pulse {
+    0%,
+    26% {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    40% {
+      opacity: 0.9;
+      transform: scale(1);
+    }
+    60%,
+    100% {
+      opacity: 0;
+      transform: scale(1.25);
+    }
+  }
+  .ti-banner {
+    animation: ti-drop 4.2s var(--motion-ease-out) infinite;
+  }
+  @keyframes ti-drop {
+    0%,
+    34% {
+      opacity: 0;
+      transform: translateY(-14px);
+    }
+    44%,
+    90% {
+      opacity: 1;
+      transform: none;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  .ti-tip {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: ti-tap 4.2s ease-in-out infinite;
+  }
+  @keyframes ti-tap {
+    0%,
+    52% {
+      opacity: 0;
+      transform: scale(1.6);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    66% {
+      transform: scale(0.82);
+    }
+    72%,
+    90% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  .ti-chip {
+    transform-box: fill-box;
+    transform-origin: 0% 50%;
+    animation: ti-chip 4.2s var(--motion-ease-out) infinite;
+  }
+  @keyframes ti-chip {
+    0%,
+    40% {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    52%,
+    90% {
+      opacity: 1;
+      transform: none;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html:not([data-motion="full"]) :is(.ti-phone, .ti-waves, .ti-ring, .ti-banner, .ti-tip, .ti-chip) {
+      animation: none !important;
+    }
+  }
+  html[data-motion="reduce"] :is(.ti-phone, .ti-waves, .ti-ring, .ti-banner, .ti-tip, .ti-chip) {
+    animation: none !important;
+  }
+}
+
+/*
+ * ── The footer (D-078): the approved layout (D-060) in the site's own language ───────────
+ * A navy linen band (`band-ink`) with a perforated top edge, a postmark's wavy cancellation
+ * lines over the weave, block capitals with a script word, typewritten labels, and the site's
+ * ticket button. Tokens only.
+ */
+@layer components {
+  .ft {
+    --perf: 9px;
+    position: relative;
+    isolation: isolate;
+    -webkit-mask: radial-gradient(circle at 50% 0, transparent var(--perf), #000 calc(var(--perf) + 0.5px)) top / calc(var(--perf) * 3) 100% repeat-x;
+    mask: radial-gradient(circle at 50% 0, transparent var(--perf), #000 calc(var(--perf) + 0.5px)) top / calc(var(--perf) * 3) 100% repeat-x;
+  }
+  /* the cancellation: wavy lines drawn across the band, as a postmark draws them across a stamp */
+  .ft::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='44' fill='none' stroke='%23fffbf4' stroke-opacity='.07' stroke-width='1.3'%3E%3Cpath d='M0 5.5q40-9 80 0t80 0 80 0 80 0M0 16.5q40-9 80 0t80 0 80 0 80 0M0 27.5q40-9 80 0t80 0 80 0 80 0M0 38.5q40-9 80 0t80 0 80 0 80 0'/%3E%3C/svg%3E");
+    background-size: 320px 44px;
+    pointer-events: none;
+  }
+  .ft-h {
+    font-size: var(--fs-d1);
+    color: var(--paper-raised);
+  }
+  .ft-lede {
+    font-size: var(--fs-lede);
+    color: color-mix(in srgb, var(--paper) 82%, transparent);
+  }
+  /* cream ticket, coral shadow; on hover it turns mustard (the approved footer button's colours) */
+  .ft-cta {
+    --face-hover: var(--accent-ochre);
+    --shade: var(--accent-terracotta);
+  }
+  .ft-link {
+    display: inline-flex;
+    align-items: center;
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    color: color-mix(in srgb, var(--paper) 82%, transparent);
+    font-weight: 500;
+    text-decoration-line: underline;
+    text-decoration-color: transparent;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+    transition:
+      color var(--dur-ui) ease,
+      text-decoration-color var(--dur-ui) ease;
+  }
+  .ft-link:hover {
+    color: var(--paper-raised);
+    text-decoration-color: var(--accent-ochre);
+  }
+  .ft-base {
+    border-top: 2px dashed color-mix(in srgb, var(--paper) 22%, transparent);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: color-mix(in srgb, var(--paper) 72%, transparent);
+  }
+  /* The giant wordmark: large-letter capitals, cream on an extruded coral side */
+  .ft-mark {
+    margin: 0 0 -0.12em;
+    font-family: var(--ff-display);
+    font-weight: 400;
+    font-size: clamp(3.4rem, 16.8vw, 15.5rem);
+    line-height: 0.82;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: var(--paper-raised);
+    white-space: nowrap;
+    text-align: center;
+    text-shadow:
+      1px 1px 0 var(--accent-terracotta),
+      2px 2px 0 var(--accent-terracotta),
+      3px 3px 0 var(--accent-terracotta),
+      4px 4px 0 var(--accent-terracotta),
+      5px 5px 0 var(--accent-terracotta),
+      6px 6px 0 var(--accent-terracotta),
+      7px 7px 0 var(--accent-terracotta),
+      8px 8px 0 var(--accent-terracotta),
+      9px 9px 0 var(--accent-terracotta),
+      10px 10px 0 var(--accent-terracotta);
+  }
+}

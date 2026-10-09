@@ -1,0 +1,157 @@
+/*
+ * Stamp primitives. Perforation = a CSS mask: the paper rectangle (inset by half a perforation
+ * pitch) minus a row/column of round holes centred exactly on each edge. `space` repeat keeps
+ * the holes evenly distributed at any size, with a hole at every corner.
+ * Shadows use filter: drop-shadow on the wrapper, because a mask clips box-shadow.
+ */
+
+/* Same layer order as Tailwind v4, declared here too so it holds whichever stylesheet loads first.
+ * Component styles live in `components`, so Tailwind utilities passed via className win. */
+@layer theme, base, components, utilities;
+
+@layer components {
+  .sd-stamp {
+    position: relative;
+    display: inline-block;
+    vertical-align: top;
+    line-height: 0;
+  }
+
+  .sd-stamp--shadow {
+    filter: var(--elev-stamp-drop);
+  }
+
+  .sd-stamp__perf {
+    --hole: 4px;
+    --pitch: 11px;
+    --dot: radial-gradient(circle var(--hole), black 94%, transparent 100%);
+    position: relative;
+    display: block;
+    background-color: var(--paper-raised);
+    background-image: var(--texture-grain);
+    background-size: var(--texture-grain-size);
+
+    -webkit-mask:
+      linear-gradient(black 0 0) center / calc(100% - var(--pitch)) calc(100% - var(--pitch)) no-repeat,
+      var(--dot) 0 0 / var(--pitch) var(--pitch) space no-repeat,
+      var(--dot) 0 100% / var(--pitch) var(--pitch) space no-repeat,
+      var(--dot) 0 0 / var(--pitch) var(--pitch) no-repeat space,
+      var(--dot) 100% 0 / var(--pitch) var(--pitch) no-repeat space;
+    -webkit-mask-composite: source-out, source-over, source-over, source-over, source-over;
+    mask:
+      linear-gradient(black 0 0) center / calc(100% - var(--pitch)) calc(100% - var(--pitch)) no-repeat,
+      var(--dot) 0 0 / var(--pitch) var(--pitch) space no-repeat,
+      var(--dot) 0 100% / var(--pitch) var(--pitch) space no-repeat,
+      var(--dot) 0 0 / var(--pitch) var(--pitch) no-repeat space,
+      var(--dot) 100% 0 / var(--pitch) var(--pitch) no-repeat space;
+    mask-composite: subtract, add, add, add, add;
+  }
+
+  /* A faint printed hairline just inside the margin, the way a sheet's gum edge catches light. */
+  .sd-stamp__perf::after {
+    content: "";
+    position: absolute;
+    inset: calc(var(--pitch) / 2);
+    box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--stamp-accent, var(--paper-edge)) 45%, transparent);
+    pointer-events: none;
+  }
+
+  .sd-stamp__art {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .sd-stamp__mark {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--pitch) / 2);
+    font-family: var(--ff-postal);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-align: center;
+    color: var(--ink-faded);
+    opacity: 0.85;
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* ── Empty slot (sender portal: nothing added yet) ───────────────── */
+  .sd-stamp-empty {
+    position: relative;
+    display: grid;
+    place-items: center;
+    border: 2px dashed color-mix(in srgb, var(--ink-faded) 55%, transparent);
+    border-radius: var(--r-paper);
+    background:
+      repeating-linear-gradient(
+        -45deg,
+        transparent 0 7px,
+        color-mix(in srgb, var(--paper-shadow) 35%, transparent) 7px 8px
+      ),
+      color-mix(in srgb, var(--paper-deep) 45%, transparent);
+    color: var(--ink-faded);
+    line-height: 1.2;
+  }
+
+  /* ── Overlays ─────────────────────────────────────────────────── */
+  .sd-overlay {
+    position: absolute;
+    pointer-events: none;
+  }
+
+  /* ── Heart seal ───────────────────────────────────────────────── */
+  .sd-seal {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+    flex: none;
+  }
+
+  .sd-seal__svg {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    filter: var(--elev-stamp-drop);
+  }
+
+  /* Breathing glow: a warm halo behind the wax. Static (calm, softly lit) under reduced motion. */
+  .sd-seal__glow {
+    position: absolute;
+    inset: -38%;
+    border-radius: 50%;
+    /* Solid colour shaped by an alpha mask: no colour interpolation towards transparent. */
+    background: var(--wax-highlight);
+    -webkit-mask: radial-gradient(closest-side, rgb(0 0 0 / 0.42), rgb(0 0 0 / 0.17) 55%, transparent);
+    mask: radial-gradient(closest-side, rgb(0 0 0 / 0.42), rgb(0 0 0 / 0.17) 55%, transparent);
+    opacity: 0.55;
+    transform: scale(0.94);
+    pointer-events: none;
+    animation: sd-seal-breathe 2.8s var(--motion-ease-in-out) infinite alternate;
+  }
+
+  @keyframes sd-seal-breathe {
+    from {
+      opacity: 0.35;
+      transform: scale(0.88);
+    }
+    to {
+      opacity: 0.85;
+      transform: scale(1.04);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html:not([data-motion="full"]) .sd-seal__glow {
+      animation: none;
+    }
+  }
+
+  html[data-motion="reduce"] .sd-seal__glow {
+    animation: none;
+  }
+}

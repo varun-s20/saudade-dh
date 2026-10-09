@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 300" width="240" height="300">
+<title>Voice stamp. PLACEHOLDER, client artwork pending</title>
+<defs>
+<filter id="rough" x="-3%" y="-3%" width="106%" height="106%"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="13" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="1.5" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="speck" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="1" seed="20"/><feColorMatrix values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 -7 5.1"/></filter>
+<mask id="ink" maskUnits="userSpaceOnUse" x="-150" y="-150" width="540" height="600"><rect x="-150" y="-150" width="540" height="600" fill="#fff" filter="url(#speck)"/></mask>
+<filter id="paper" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="16"/><feColorMatrix values="0 0 0 0 .55 0 0 0 0 .42 0 0 0 0 .3 0 0 0 .09 0"/></filter>
+<pattern id="dots" width="4.2" height="4.2" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><circle cx="2.1" cy="2.1" r="1.25" fill="#9fc0a6"/></pattern>
+<radialGradient id="halo" cx="120" cy="110" r="105" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+<mask id="haloM"><rect x="18" y="18" width="204" height="200" fill="url(#halo)"/></mask>
+<pattern id="grille" width="3.4" height="10" patternUnits="userSpaceOnUse"><path d="M1.7 0v10" stroke="#3a654b" stroke-width="1"/></pattern>
+<clipPath id="win"><rect x="18" y="18" width="204" height="200"/></clipPath>
+</defs>
+<rect width="240" height="300" fill="#fcf7ee"/>
+<g clip-path="url(#win)">
+<rect x="18" y="18" width="204" height="200" fill="url(#dots)" mask="url(#haloM)" opacity=".9"/>
+<g mask="url(#ink)" filter="url(#rough)"><path d="M63.8 138.2A62 62 0 0 1 63.8 85.8M176.2 85.8A62 62 0 0 1 176.2 138.2M52.9 143.3A74 74 0 0 1 52.9 80.7M187.1 80.7A74 74 0 0 1 187.1 143.3M42.1 148.3A86 86 0 0 1 42.1 75.7M197.9 75.7A86 86 0 0 1 197.9 148.3M31.2 153.4A98 98 0 0 1 31.2 70.6M208.8 70.6A98 98 0 0 1 208.8 153.4" fill="none" stroke="#3a654b" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="14 3 4 3"/></g>
+<g mask="url(#ink)">
+<path d="M76 206V118C76 80 96 56 120 48C144 56 164 80 164 118V206Z" fill="#9fc0a6" transform="translate(1.6 -1.1)"/>
+<path d="M88 150V120C88 92 102 74 120 66C138 74 152 92 152 120V150Z" fill="#fcf7ee"/>
+<path d="M88 150V120C88 92 102 74 120 66C138 74 152 92 152 120V150Z" fill="url(#grille)"/>
+<path d="M104 182h32v10h-32z" fill="#d2694a" opacity=".85" transform="translate(1 -.6)"/>
+</g>
+<g mask="url(#ink)" filter="url(#rough)" fill="none" stroke="#3a654b" stroke-linejoin="round">
+<path d="M76 206V118C76 80 96 56 120 48C144 56 164 80 164 118V206Z" stroke-width="1.6"/>
+<path d="M70 206h100M70 210h100" stroke-width="1.4"/>
+<path d="M80 210v6M160 210v6" stroke-width="2.4"/>
+<path d="M88 150V120C88 92 102 74 120 66C138 74 152 92 152 120V150Z" stroke-width="1.3"/>
+<path d="M104 150V112C104 98 112 88 120 82C128 88 136 98 136 112V150M120 82V150" stroke-width="2.6" stroke="#3a654b"/>
+<path d="M104 112c10 4 22 4 32 0" stroke-width="1.4"/>
+<path d="M82 160H158" stroke-width=".8"/>
+<path d="M102 172a18 18 0 0 1 36 0z" fill="#fcf7ee" stroke-width="1.2"/>
+<path d="M107.8 167.6L104.5 166.4M109.2 164.7L106.3 162.8M111.3 162.3L109 159.7M113.9 160.5L112.3 157.4M116.9 159.4L116 156M120 159L120 155.5M123.1 159.4L124 156M126.1 160.5L127.7 157.4M128.7 162.3L131 159.7M130.8 164.7L133.7 162.8M132.2 167.6L135.5 166.4" stroke-width=".8"/>
+<path d="M120 172l7-11" stroke="#d2694a" stroke-width="1.3" stroke-linecap="round"/>
+<circle cx="93" cy="190" r="6.5" stroke-width="1.3"/><circle cx="147" cy="190" r="6.5" stroke-width="1.3"/>
+<path d="M93 184.5v5M147 184.5v5" stroke-width="1.3"/>
+<path d="M82 128c0-28 14-50 30-62M158 128c0-28-14-50-30-62" stroke-width=".7"/>
+</g>
+</g><g mask="url(#ink)">
+<path fill="#9fc0a6" fill-rule="evenodd" transform="translate(.8 -.6)" d="M4 4h232v292H4zM10.5 10.5v279h219v-279z"/>
+<g filter="url(#rough)" fill="none" stroke="#3a654b">
+<rect x="14" y="14" width="212" height="272" stroke-width="1"/>
+<rect x="17.5" y="17.5" width="205" height="201" stroke-width="1.4"/>
+<path d="M30 252.5h180" stroke-width=".7"/>
+</g>
+<g font-family="Georgia,'Times New Roman',serif" fill="#3a654b" text-anchor="middle">
+<text x="120" y="244" font-size="17" letter-spacing="2.5" textLength="178" lengthAdjust="spacingAndGlyphs">WIRELESS</text>
+<text x="120" y="267" font-size="9.5" font-style="italic" letter-spacing=".6">No. 3 &#183; On the air &#183; Saudade</text>
+</g>
+</g>
+<g transform="translate(37 39)" mask="url(#ink)">
+<circle r="13.5" fill="#fcf7ee" stroke="#3a654b" stroke-width="1.2"/>
+<circle r="10.5" fill="none" stroke="#9fc0a6" stroke-width="1.6" transform="translate(.7 -.5)"/>
+<text y="5.5" font-family="Georgia,'Times New Roman',serif" font-size="15" font-style="italic" fill="#3a654b" text-anchor="middle">3</text>
+</g>
+<text x="120" y="281" font-family="'Courier New',Courier,monospace" font-size="6.6" letter-spacing="1.6" fill="#3a654b" fill-opacity=".72" text-anchor="middle">PLACEHOLDER &#183; CLIENT ART PENDING</text>
+<rect width="240" height="300" filter="url(#paper)"/>
+</svg>

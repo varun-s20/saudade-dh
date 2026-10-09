@@ -1,0 +1,260 @@
+/*
+ * Saudade design tokens: the single source of truth for every visual value.
+ *
+ * Direction: "WISH YOU WERE HERE" (DECISIONS.md D-060, DIRECTIONS.md §F). The 1940s linen
+ * "large-letter" postcard: giant dimensional block letters with photographs inside them, a
+ * script "Greetings from…", turquoise skies and sunset coral printed slightly faded on a linen
+ * weave, a white postcard border, and on the back a typewriter, a fountain pen and a stamp box.
+ * References still studied for patterns (later.com, gumroad.com, oatly.com), nothing copied.
+ * Motion follows Emil Kowalski's rules (purposeful, ease-out, short, interruptible).
+ *
+ * Rules
+ * - Components never use raw hex/px values: tokens directly, or the Tailwind utilities mapped
+ *   in globals.css.
+ * - The post-launch rebrand (~Dec 2026) should only need edits here, in app/fonts.ts and in
+ *   the stamp asset map (config/stamps.ts).
+ * - Text/background pairs listed in comments meet WCAG 2.2 AA (4.5:1 body, 3:1 large/UI).
+ * - The public footer keeps its own pinned values (public.css `.ft-scope`), by request.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* ── Paper ─────────────────────────────────────────────── */
+  --paper: #fbf5eb; /* postcard white: page ground */
+  --paper-raised: #fffbf4; /* cards, letter sheet */
+  --paper-deep: #f2e8d8; /* linen card stock, envelope body, alternate bands */
+  --paper-shadow: #e2d4be; /* folds, hairlines */
+  --paper-edge: #c8b496; /* deckled edges, borders on paper */
+  --paper-liner: #a8dce2; /* envelope liner: pale turquoise */
+
+  /* ── Ink (sepia, like a postcard back) ─────────────────── */
+  --ink: #2f231b; /* body text: 14.1:1 on --paper */
+  --ink-soft: #574739; /* secondary text: 8.2:1 on --paper */
+  --ink-faded: #76655a; /* captions/meta: 5.1:1 on --paper, 4.6:1 on --paper-deep */
+  --ink-inverse: #fbf5eb;
+  --ink-letter: #23345a; /* blue-black fountain pen for the handwritten letter: 12:1 on --paper-raised */
+
+  /* ── Postal ────────────────────────────────────────────── */
+  --postmark: #213a63; /* navy cancellation ink: 10.5:1 on --paper */
+  --postmark-faded: rgb(33 58 99 / 0.5);
+
+  /* ── Linen postcard colours (fills) + "-ink" partners for text on paper ── */
+  --accent-terracotta: #f07a5a; /* sunset coral. Fill: --ink on it 5.6:1 */
+  --accent-terracotta-ink: #b5432a; /* 5.1:1 on --paper */
+  --accent-dusty-blue: #a8dce2; /* pale turquoise sky. --ink on it 10.2:1 */
+  --accent-dusty-blue-ink: #1e6f7d; /* 5.3:1 on --paper */
+  --accent-sage: #b5dbb0; /* palm-leaf green. --ink on it 10:1 */
+  --accent-sage-ink: #2e6a40; /* 6:1 on --paper */
+  --accent-rose: #f3a9b9; /* postcard pink. --ink on it 8.1:1 */
+  --accent-rose-ink: #a23e57; /* 5.8:1 on --paper */
+  --accent-red: #b5432a; /* brick coral: THE call-to-action colour. --paper text 5.1:1 */
+  --accent-red-ink: #93341f; /* 7:1 on --paper */
+  --accent-ochre: #f0b437; /* mustard sun. --ink on it 8.2:1 */
+  --accent-ochre-ink: #7a560a; /* 6.1:1 on --paper */
+  --accent-cobalt: #1e6f7d; /* deep turquoise sea: colour bands, the reveal stage. --paper text 5.3:1 */
+  --accent-cobalt-deep: #134e5a; /* --paper text 8.6:1 */
+  --accent-vermilion: #f07a5a; /* bright coral, decorative */
+  --accent-lilac: #a8dce2; /* kept for older names: pale turquoise */
+  --accent-navy: #213a63; /* block-letter extrusions, postmarks, strong outlines. --paper text 10.5:1 */
+  --accent-sky: #2fa3b5; /* linen-postcard sky. --ink on it 5.1:1 */
+  --accent-palm: #4e9a63; /* decorative */
+
+  /* ── Gradients ─────────────────────────────────────────── */
+  --grad-sky: linear-gradient(180deg, #2a9eb0 0%, #34a8b9 30%, #8fd0d8 72%, #f6e7c8 100%); /* top ≥ 4.5:1 with --ink, for the header that floats over it */
+  --grad-sunset: linear-gradient(180deg, #f6c46a 0%, #f39a63 52%, #ee7b5c 100%);
+  --grad-sea: linear-gradient(180deg, #1e6f7d 0%, #134e5a 100%);
+  /* Accent words inside headlines (kept for older screens): coral → navy */
+  --grad-word: linear-gradient(100deg, var(--accent-red) 0%, var(--accent-navy) 100%);
+  --grad-word-light: linear-gradient(100deg, var(--accent-ochre) 0%, var(--accent-rose) 100%);
+  --grad-dusk: var(--grad-sunset);
+  --grad-dusk-diag: linear-gradient(160deg, #f39a63 0%, #f6c46a 100%);
+
+  /* ── Feedback ──────────────────────────────────────────── */
+  --success: #2e6a40;
+  --danger: #a8331c; /* 5.9:1 on --paper */
+  --warning: #7a560a;
+
+  /* ── Special materials ─────────────────────────────────── */
+  --wax: #b8342a;
+  --wax-highlight: #e8634f;
+  --wax-shadow: #6b1a14;
+  --vinyl: #1d1713;
+  --vinyl-groove: #2e2620;
+  --vinyl-sheen: rgb(255 255 255 / 0.08);
+  --desk: #e9dcc6;
+
+  /* ── Admin (calm, same family) ─────────────────────────── */
+  --admin-bg: #f6efe3;
+  --admin-surface: #fffbf4;
+  --admin-line: #e3d6c2;
+  --admin-ink: #2f231b;
+  --admin-ink-soft: #574739; /* 8:1 on --admin-surface */
+
+  /* ── Focus ─────────────────────────────────────────────── */
+  --focus-ring: #1e6f7d;
+
+  /* ── Typography (families wired by next/font in app/fonts.ts) ── */
+  --ff-display: var(--font-bowlby), "Arial Black", Impact, sans-serif; /* large-letter block capitals */
+  --ff-script: var(--font-grand-hotel), "Brush Script MT", cursive; /* "Greetings from…" */
+  --ff-hand: var(--font-nanum-pen), "Bradley Hand", "Segoe Print", cursive;
+  --ff-postal: var(--font-courier-prime), "Courier New", ui-monospace, monospace;
+  --ff-ui: var(--font-karla), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ff-hand-fallback: var(--ff-ui);
+  --ff-marker-fallback: var(--ff-postal);
+
+  /* Type scale (fluid, 390px → 1440px). Display = Bowlby One, always capitals. */
+  --fs-mega: clamp(3.4rem, 0.6rem + 11.5vw, 11.5rem); /* the large letters */
+  --fs-hero: clamp(2.4rem, 1.2rem + 5vw, 5.5rem);
+  --fs-d1: clamp(1.9rem, 1.25rem + 2.7vw, 3.6rem); /* 30px → 58px */
+  --fs-d2: clamp(1.5rem, 1.15rem + 1.45vw, 2.4rem);
+  --fs-d3: clamp(1.15rem, 1.02rem + 0.5vw, 1.45rem);
+  --fs-lede: clamp(1.08rem, 1rem + 0.35vw, 1.3rem);
+  --fs-script: clamp(2rem, 1.3rem + 2.8vw, 3.8rem);
+  --leading-display: 0.98;
+  --tracking-display: 0.005em;
+
+  --text-letter: 1.875rem; /* Nanum Pen runs small: 30px ≈ 19px optical */
+  --leading-letter: 1.4;
+  --text-postal: 0.75rem;
+  --tracking-postal: 0.12em;
+
+  /* ── Radii: postcards have softly rounded corners ───────── */
+  --r-paper: 4px;
+  --r-soft: 10px;
+  --r-card: 14px;
+  --r-sheet: 22px;
+  --r-pill: 999px;
+
+  /* ── Lines, edges ──────────────────────────────────────── */
+  --line-w: 2px;
+  --line-w-heavy: 3px;
+  --notch: 0.75rem;
+  --cut: clamp(3.5rem, 2rem + 6vw, 8.5rem);
+  --perf: 7px; /* stamp perforation radius on band edges */
+  --border-card: 10px; /* the white border round a postcard picture */
+
+  /* ── Motion (Emil Kowalski): strong custom curves, short UI durations ── */
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1); /* entering, responding */
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1); /* moving on screen (flips, spins) */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-settle: cubic-bezier(0.34, 1.4, 0.64, 1); /* a touch of overshoot, for things that land (stickers, letters) */
+  --dur-press: 140ms;
+  --dur-ui: 200ms;
+  --dur-move: 520ms;
+  --lift: 0.25rem;
+  --lift-ease: var(--ease-out-strong);
+  --big-lift-x: 0.25rem;
+  --big-lift-y: 0.25rem;
+  --reveal-ease: var(--ease-out-strong);
+  --reveal-dur: 700ms;
+
+  /* ── Elevation ─────────────────────────────────────────── */
+  --elev-flat: 0 1px 0 rgb(47 35 27 / 0.06);
+  --elev-paper: 0 1px 2px rgb(47 35 27 / 0.08), 0 14px 30px -18px rgb(47 35 27 / 0.32);
+  --elev-stamp: 0 1px 1px rgb(47 35 27 / 0.14), 0 6px 12px -5px rgb(47 35 27 / 0.28);
+  --elev-lifted: 0 2px 4px rgb(47 35 27 / 0.08), 0 28px 54px -24px rgb(47 35 27 / 0.42);
+  --elev-envelope: 0 42px 72px -38px rgb(47 35 27 / 0.48), 0 14px 26px -14px rgb(47 35 27 / 0.2);
+  --elev-sheet: 0 -10px 44px -14px rgb(47 35 27 / 0.3);
+  /* Hard offset shadow (the gumroad.com reference), in navy postmark ink */
+  --elev-print: 4px 4px 0 var(--accent-navy);
+  --elev-print-sm: 3px 3px 0 var(--accent-navy);
+  --elev-extrude: 6px 6px 0 var(--accent-navy);
+  /* A postcard resting on the desk */
+  --elev-card: 0 1px 1px rgb(47 35 27 / 0.12), 0 10px 18px -10px rgb(47 35 27 / 0.35), 0 30px 46px -30px rgb(47 35 27 / 0.3);
+
+  /* ── Layering ──────────────────────────────────────────── */
+  --z-base: 0;
+  --z-envelope: 10;
+  --z-stamps: 20;
+  --z-header: 30;
+  --z-sheet: 50;
+  --z-modal: 60;
+  --z-toast: 70;
+  --z-demo: 90;
+
+  /* ── Layout ────────────────────────────────────────────── */
+  --gutter: clamp(1.25rem, 0.6rem + 2.6vw, 3rem);
+  --measure-page: 78rem; /* 1248px */
+  --measure-text: 38rem;
+  --measure-phone: 26.875rem;
+  --measure-letter: 36rem;
+  --measure-admin: 84rem;
+  --section-y: clamp(4.5rem, 2.5rem + 7vw, 9rem);
+  --tap-min: 2.75rem;
+
+  /* ── Motion (CSS side; JS mirrors these in lib/tokens.ts) ── */
+  --motion-dur-instant: 100ms;
+  --motion-dur-fast: 180ms;
+  --motion-dur-base: 280ms;
+  --motion-dur-slow: 480ms;
+  --motion-dur-ceremony: 900ms;
+  --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --motion-ease-paper: cubic-bezier(0.3, 0.7, 0.2, 1);
+  --motion-ease-press: cubic-bezier(0.55, 0, 0.75, 0.2);
+
+  /* ── Textures (self-made; see docs/ASSETS.md) ──────────── */
+  --texture-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .18 0 0 0 0 .14 0 0 0 0 .1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --texture-fibre: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .5' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .47 0 0 0 0 .36 0 0 0 .045 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --texture-grain-size: 220px;
+  /* Linen weave: the embossed crosshatch of a 1940s linen postcard (sepia on paper) */
+  --texture-linen: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='5' height='5'%3E%3Cpath d='M0 .5h5M0 3h5' stroke='%232f231b' stroke-opacity='.045'/%3E%3Cpath d='M.5 0v5M3 0v5' stroke='%232f231b' stroke-opacity='.035'/%3E%3C/svg%3E");
+  /* …and white on colour fields */
+  --texture-linen-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='5' height='5'%3E%3Cpath d='M0 .5h5M0 3h5' stroke='%23fff' stroke-opacity='.09'/%3E%3Cpath d='M.5 0v5M3 0v5' stroke='%23fff' stroke-opacity='.07'/%3E%3C/svg%3E");
+  --texture-linen-size: 5px 5px;
+  /* Sunburst rays (souvenir postcards): paint behind skies and sunsets */
+  --texture-rays: repeating-conic-gradient(from 0deg at 50% 100%, rgb(255 255 255 / 0.16) 0deg 5deg, transparent 5deg 12deg);
+  --texture-riso: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 -2.2 1.35'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23r)' opacity='.12'/%3E%3C/svg%3E");
+  --texture-grid: linear-gradient(rgb(47 35 27 / 0.06) 1px, transparent 1px), linear-gradient(90deg, rgb(47 35 27 / 0.06) 1px, transparent 1px);
+  --texture-grid-size: 18px 18px;
+  --texture-halftone: radial-gradient(rgb(47 35 27 / 0.2) 1.1px, transparent 1.5px);
+  --texture-halftone-size: 9px 9px;
+  --texture-waves: var(--texture-linen);
+  --texture-waves-light: var(--texture-linen-light);
+  --texture-waves-size: var(--texture-linen-size);
+  --texture-azulejo: var(--texture-linen-light);
+  --texture-azulejo-ink: var(--texture-linen);
+  --texture-azulejo-size: 5px;
+  /* Airmail border stripes */
+  --texture-airmail: repeating-linear-gradient(-45deg, var(--accent-red) 0 12px, transparent 12px 20px, var(--accent-navy) 20px 32px, transparent 32px 40px);
+}
+
+/*
+ * Design-system additions (masked shapes, stationery, materials). Names unchanged.
+ */
+:root {
+  --elev-stamp-drop: drop-shadow(0 1px 0.5px rgb(47 35 27 / 0.2)) drop-shadow(0 4px 5px rgb(47 35 27 / 0.16));
+  --elev-paper-drop: drop-shadow(0 1px 1px rgb(47 35 27 / 0.08)) drop-shadow(0 12px 14px rgb(47 35 27 / 0.14));
+  --elev-lifted-drop: drop-shadow(0 2px 2px rgb(47 35 27 / 0.1)) drop-shadow(0 18px 20px rgb(47 35 27 / 0.2));
+
+  --paper-rule: color-mix(in srgb, var(--postmark) 16%, transparent);
+  --paper-rule-margin: color-mix(in srgb, var(--accent-red) 30%, transparent);
+  --rule-letter: calc(var(--text-letter) * var(--leading-letter));
+  --paper-foxing: color-mix(in srgb, var(--paper-edge) 30%, transparent);
+
+  --wax-glow: color-mix(in srgb, var(--wax-highlight) 42%, transparent);
+
+  --texture-ink: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='i'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -7 5.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23i)'/%3E%3C/svg%3E");
+  --texture-ink-size: 160px;
+}
+
+/*
+ * Envelope, letter & reveal materials (MOTION_SPEC.md). Shading layers are flat colours whose
+ * opacity is animated (never box-shadow/filter), so the reveal stays on the compositor.
+ */
+:root {
+  --liner-line: rgb(30 111 125 / 0.42);
+  --liner-dot: rgb(251 245 235 / 0.75);
+  --crease-dark: rgb(47 35 27 / 0.08);
+  --crease-light: rgb(255 255 255 / 0.65);
+  --shade: rgb(47 35 27);
+  --cast-shadow: rgb(47 35 27 / 0.3);
+  --seal-glow: rgb(232 99 79 / 0.55);
+  --dial-glow: rgb(240 180 55 / 0.85);
+  --scrim: rgb(19 30 36 / 0.55);
+
+  --motion-ease-lift: cubic-bezier(0.33, 0, 0.15, 1);
+  --motion-ease-fall: cubic-bezier(0.5, 0, 0.75, 0);
+  --motion-ease-hinge: cubic-bezier(0.45, 0, 0.2, 1);
+}

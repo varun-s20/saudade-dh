@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 300" width="240" height="300">
+<title>Photos stamp. PLACEHOLDER, client artwork pending</title>
+<defs>
+<filter id="rough" x="-3%" y="-3%" width="106%" height="106%"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="4" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="1.5" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="speck" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="1" seed="11"/><feColorMatrix values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 -7 5.1"/></filter>
+<mask id="ink" maskUnits="userSpaceOnUse" x="-150" y="-150" width="540" height="600"><rect x="-150" y="-150" width="540" height="600" fill="#fff" filter="url(#speck)"/></mask>
+<filter id="paper" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 .55 0 0 0 0 .42 0 0 0 0 .3 0 0 0 .09 0"/></filter>
+<pattern id="dots" width="4.4" height="4.4" patternUnits="userSpaceOnUse" patternTransform="rotate(18)"><circle cx="2.2" cy="2.2" r="1.35" fill="#d2694a"/></pattern>
+<linearGradient id="glow" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff"/><stop offset=".75" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<mask id="skyM"><rect x="18" y="18" width="204" height="136" fill="url(#glow)"/></mask>
+<clipPath id="sky"><rect x="18" y="18" width="204" height="136"/></clipPath>
+<clipPath id="win"><rect x="18" y="18" width="204" height="200"/></clipPath>
+<mask id="sunCut"><rect x="60" y="60" width="130" height="100" fill="#fff"/><path d="M60 128h130M60 136.5h130M60 144h130M60 150.5h130" stroke="#000" stroke-width="2.4"/></mask>
+</defs>
+<rect width="240" height="300" fill="#fcf7ee"/>
+<g clip-path="url(#win)">
+<rect x="18" y="18" width="204" height="136" fill="url(#dots)" mask="url(#skyM)" opacity=".85"/>
+<g mask="url(#ink)"><circle cx="125.6" cy="126.8" r="38" fill="#d2694a" mask="url(#sunCut)" clip-path="url(#sky)"/></g>
+<g mask="url(#ink)" filter="url(#rough)">
+<path clip-path="url(#sky)" d="M72 126.1L-25.9 122.6M66.3 121.8L12.6 116M72.8 118.8L-23.6 101.4M67.8 113.7L15.5 100.3M74.7 111.6L-18.3 80.6M70.4 105.8L20.5 85.1M77.5 104.7L-10.1 60.9M74.1 98.4L27.7 70.8M81.3 98.3L0.8 42.5M78.8 91.6L36.8 57.7M85.9 92.6L14.2 25.8M84.5 85.6L47.7 46M91.4 87.5L29.9 11.2M90.9 80.4L60.1 36M97.5 83.3L47.5 -1M98 76.1L73.9 27.8M104.1 80L66.6 -10.6M105.7 73L88.6 21.7M111.1 77.6L86.9 -17.3M113.7 70.9L104.1 17.8M118.4 76.3L108 -21.1M121.9 70L120 16.1M125.9 76L129.4 -21.9M130.2 70.3L136 16.6M133.2 76.8L150.6 -19.6M138.3 71.8L151.7 19.5M140.4 78.7L171.4 -14.3M146.2 74.4L166.9 24.5M147.3 81.5L191.1 -6.1M153.6 78.1L181.2 31.7M153.7 85.3L209.5 4.8M160.4 82.8L194.3 40.8M159.4 89.9L226.2 18.2M166.4 88.5L206 51.7M164.5 95.4L240.8 33.9M171.6 94.9L216 64.1M168.7 101.5L253 51.5M175.9 102L224.2 77.9M172 108.1L262.6 70.6M179 109.7L230.3 92.6M174.4 115.1L269.3 90.9M181.1 117.7L234.2 108.1M175.7 122.4L273.1 112M182 125.9L235.9 124" stroke="#1b2638" stroke-width=".7" opacity=".85"/>
+<path d="M18 156H46.5M50.7 156H94.3M98.2 156H128.4M132.8 156H152.7M156.7 156H190.9M196 156H213M216.3 156H222M18 158.8H54.2M56.4 158.8H101.8M108.3 158.8H143.2M148 158.8H167M169.1 158.8H200M202.3 158.8H222M18 162.3H33M37.4 162.3H65.5M71.9 162.3H102.5M107.8 162.3H137.8M143.2 162.3H171.9M175.3 162.3H221.2M18 166.3H58.9M65 166.3H89.1M92.4 166.3H115.7M118.1 166.3H156.6M160.9 166.3H202M206.2 166.3H222M18 171H32M35.4 171H78.5M83.5 171H128.9M133.4 171H149.7M155.8 171H194.7M198.4 171H215.2M219.3 171H222M18 176.3H35.8M39.5 176.3H56.7M59.2 176.3H98.7M101.9 176.3H133.8M138.9 176.3H159M166.2 176.3H184.3M190.9 176.3H208.6M213.5 176.3H222M18 182.2H63.1M71.2 182.2H94.9M103.6 182.2H124.4M129.4 182.2H170.7M177.6 182.2H194.8M204.3 182.2H222M18 188.8H56.7M61.4 188.8H84.9M87.5 188.8H104.4M111.2 188.8H132.9M139.9 188.8H165.8M171.5 188.8H216.2M18 195.9H50.4M60 195.9H79.9M83.2 195.9H126.3M135.5 195.9H157.5M161.1 195.9H198.8M209.1 195.9H222M18 203.7H60.2M67.9 203.7H95.4M98.4 203.7H113.6M124.7 203.7H146.3M154.9 203.7H177.1M186.9 203.7H220M18 212.1H37.6M46.8 212.1H63M67.3 212.1H99.2M109.7 212.1H143.4M148.2 212.1H191.5M195.6 212.1H210.1M214.8 212.1H222" stroke="#1b2638" stroke-width=".85" stroke-linecap="round"/>
+<path d="M101.4 157h40M104.5 160.3h36.9M107.7 164.3h33.8M105.7 169h30.7M109.1 174.4h27.6M114.9 180.5h24.5M117.1 187.3h21.4M116.1 194.8h18.3M117.9 203h15.2M118.6 211.9h12.1" stroke="#d2694a" stroke-width="1.7" stroke-linecap="round" transform="translate(1.2 -.4)"/>
+<path d="M18 154.2H222" stroke="#1b2638" stroke-width="1"/>
+<path d="M14 186L96 155.5L96 157.2L14 197Z" fill="#d2694a" transform="translate(1.4 -.8)" opacity=".9"/>
+<path d="M14 186L96 155.5L96 157.2L14 197Z" fill="none" stroke="#1b2638" stroke-width="1.1"/>
+<path d="M14 186L16 197M20.8 183.5L22.8 193.7M27.7 180.9L29.7 190.4M34.5 178.4L36.5 187.1M41.3 175.8L43.3 183.7M48.2 173.3L50.2 180.4M55 170.8L57 177.1M61.8 168.2L63.8 173.8M68.7 165.7L70.7 170.5M75.5 163.1L77.5 167.1M82.3 160.6L84.3 163.8M89.2 158L91.2 160.5" stroke="#1b2638" stroke-width=".55"/>
+<path d="M14 197v24M28.9 189.8v20.2M42.5 183.2v16.7M54.8 177.2v13.5M65.8 171.9v10.7M75.3 167.2v8.3M83.3 163.3v6.2M89.6 160.3v4.6M94 158.1v3.5M14 186v-12M28.9 180.5v-10.1M42.5 175.4v-8.4M54.8 170.8v-6.8M65.8 166.7v-5.4M75.3 163.2v-4.2M83.3 160.2v-3.2M89.6 157.9v-2.4M94 156.2v-1.8M14 174L96 153.9" stroke="#1b2638" stroke-width="1.15" stroke-linecap="round"/>
+<path d="M150 62q4-4 8 0q4-4 8 0M170 74q3-3 6 0q3-3 6 0M158 86q2.5-2.5 5 0q2.5-2.5 5 0" fill="none" stroke="#1b2638" stroke-width="1.1" stroke-linecap="round"/>
+<path d="M186 140l6-22 8 22zM193 118v24M178 142h26l-3 5h-20z" fill="none" stroke="#1b2638" stroke-width=".9" stroke-linejoin="round"/>
+</g>
+</g><g mask="url(#ink)">
+<path fill="#d2694a" fill-rule="evenodd" transform="translate(.8 -.6)" d="M4 4h232v292H4zM10.5 10.5v279h219v-279z"/>
+<g filter="url(#rough)" fill="none" stroke="#1b2638">
+<rect x="14" y="14" width="212" height="272" stroke-width="1"/>
+<rect x="17.5" y="17.5" width="205" height="201" stroke-width="1.4"/>
+<path d="M30 252.5h180" stroke-width=".7"/>
+</g>
+<g font-family="Georgia,'Times New Roman',serif" fill="#1b2638" text-anchor="middle">
+<text x="120" y="244" font-size="17" letter-spacing="2.5" textLength="178" lengthAdjust="spacingAndGlyphs">PHOTOGRAPHS</text>
+<text x="120" y="267" font-size="9.5" font-style="italic" letter-spacing=".6">No. 1 &#183; Snapshots &#183; Saudade</text>
+</g>
+</g>
+<g transform="translate(37 39)" mask="url(#ink)">
+<circle r="13.5" fill="#fcf7ee" stroke="#1b2638" stroke-width="1.2"/>
+<circle r="10.5" fill="none" stroke="#d2694a" stroke-width="1.6" transform="translate(.7 -.5)"/>
+<text y="5.5" font-family="Georgia,'Times New Roman',serif" font-size="15" font-style="italic" fill="#1b2638" text-anchor="middle">1</text>
+</g>
+<text x="120" y="281" font-family="'Courier New',Courier,monospace" font-size="6.6" letter-spacing="1.6" fill="#1b2638" fill-opacity=".72" text-anchor="middle">PLACEHOLDER &#183; CLIENT ART PENDING</text>
+<rect width="240" height="300" filter="url(#paper)"/>
+</svg>

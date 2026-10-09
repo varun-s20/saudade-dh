@@ -1,0 +1,403 @@
+/*
+ * Signature motion components (`components/motion/*`), "Wish You Were Here" (D-060).
+ * Prefixed global CSS in @layer components. Emil Kowalski's rules throughout: animate
+ * transform / opacity / clip-path only; ease-out for entering, ease-in-out for moving on
+ * screen; interruptible transitions for anything a person drives; reduced motion stays still.
+ */
+@layer theme, base, components, utilities;
+
+@layer components {
+  /* ── Large letters: photos inside block capitals ──────────────────────── */
+  .ll {
+    display: block;
+    perspective: 1100px;
+  }
+  .ll__word {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    column-gap: 0.28em;
+    transform-style: preserve-3d;
+  }
+  .ll__w {
+    display: inline-flex;
+    white-space: nowrap;
+  }
+  .ll__ch {
+    display: inline-block;
+    /* The photo only paints inside the letter's box, and Bowlby's heavy glyphs (plus their cream
+     * outline) overhang their advance width. Pad the box so nothing is cut, and give the space back
+     * with a negative margin so the spacing doesn't change. */
+    padding: 0.08em 0.1em;
+    margin: -0.08em -0.1em;
+    font-family: var(--ff-display);
+    font-weight: 400;
+    line-height: 0.92;
+    text-transform: uppercase;
+    color: transparent;
+    background-color: var(--accent-sky);
+    background-image: var(--img);
+    background-size: cover;
+    background-position: center;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-stroke: 0.03em var(--paper-raised);
+    paint-order: stroke fill;
+    filter: drop-shadow(0.022em 0.022em 0 var(--accent-navy)) drop-shadow(0.022em 0.022em 0 var(--accent-navy)) drop-shadow(0.018em 0.018em 0 var(--accent-navy))
+      drop-shadow(0 0.16em 0.18em rgb(19 30 36 / 0.22));
+    animation: ll-land 680ms var(--ease-settle) both;
+    animation-delay: calc(var(--ll-delay, 0ms) + var(--i, 0) * 55ms);
+  }
+  @keyframes ll-land {
+    from {
+      opacity: 0;
+      transform: translateY(-0.28em) rotate(-7deg) scale(0.94);
+    }
+  }
+
+  /* ── Postcard flip ─────────────────────────────────────────────────────── */
+  .pf {
+    perspective: 1400px;
+    rotate: var(--tilt, 0deg);
+  }
+  .pf__card {
+    position: relative;
+    aspect-ratio: 3 / 2;
+    transform-style: preserve-3d;
+    transition: transform var(--dur-move) var(--ease-in-out-strong);
+  }
+  .pf[data-flipped] .pf__card {
+    transform: rotateY(180deg);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .pf:hover .pf__card {
+      transform: rotateY(180deg);
+    }
+  }
+  .pf__face {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: var(--r-card);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    box-shadow: var(--elev-card);
+  }
+  .pf__back {
+    transform: rotateY(180deg);
+  }
+  .pf__turn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: var(--tap-min);
+    margin-top: 0.85rem;
+    padding: 0 0.9rem;
+    border: 0;
+    border-radius: var(--r-pill);
+    background: transparent;
+    color: var(--ink-soft);
+    font-family: var(--ff-ui);
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition:
+      transform var(--dur-press) var(--ease-out-strong),
+      background-color var(--dur-ui) ease;
+  }
+  .pf__turn:hover {
+    background: var(--paper-deep);
+    color: var(--ink);
+  }
+  .pf__turn:active {
+    transform: scale(0.97);
+  }
+
+  /* ── Cover stack: a section scrolls up over the one before it ─────────────
+   * The section underneath holds once its bottom meets the bottom of the screen (top = screen
+   * height − its height; --cs-h is measured), and sinks back a little while it is covered. */
+  .cs {
+    timeline-scope: --cs-over;
+  }
+  .cs__under {
+    position: sticky;
+    top: min(0px, calc(100svh - var(--cs-h, 100svh)));
+  }
+  .cs__over {
+    position: relative;
+    z-index: 1;
+    view-timeline: --cs-over block;
+  }
+  .cs__sink {
+    transform-origin: 50% 100%;
+  }
+  @supports (animation-timeline: view()) {
+    .cs__sink {
+      animation: cs-sink linear both;
+      animation-timeline: --cs-over;
+      animation-range: entry 0% entry 100%;
+    }
+  }
+  @keyframes cs-sink {
+    to {
+      opacity: 0.5;
+      scale: 0.95;
+    }
+  }
+
+  /* ── Souvenir rack ─────────────────────────────────────────────────────── */
+  .rk {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.5rem;
+    align-items: center;
+  }
+  @media (min-width: 64rem) {
+    .rk {
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      gap: 4rem;
+    }
+  }
+  .rk__stage {
+    /* never wider than the screen allows (the stage is 2.4 cards wide) */
+    --card-w: min(clamp(9.5rem, 5.5rem + 12vw, 14rem), calc((100vw - 2 * var(--gutter)) / 2.5));
+    --rack-r: calc(var(--card-w) * 1.27);
+    display: grid;
+    justify-items: center;
+  }
+  .rk__sign {
+    position: relative;
+    z-index: 2;
+    margin-bottom: 1.1rem;
+    padding: 0.35rem 1.1rem 0.3rem;
+    border: var(--line-w) solid var(--ink);
+    border-radius: var(--r-soft);
+    background: var(--accent-ochre);
+    color: var(--ink);
+    font-family: var(--ff-display);
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    box-shadow: var(--elev-print-sm);
+  }
+  .rk__viewport {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: calc(var(--card-w) * 2.4);
+    height: calc(var(--card-w) * 1.5 + 1.5rem);
+    perspective: 1500px;
+    perspective-origin: 50% 35%;
+    cursor: grab;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .rk__viewport:active {
+    cursor: grabbing;
+  }
+  .rk__viewport:focus-visible {
+    border-radius: var(--r-card);
+  }
+  .rk__ring {
+    position: relative;
+    width: var(--card-w);
+    aspect-ratio: 2 / 3;
+    transform-style: preserve-3d;
+  }
+  .rk__card {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .rk__pole {
+    position: absolute;
+    top: -1.4rem;
+    bottom: -0.6rem;
+    left: 50%;
+    z-index: -1;
+    width: 7px;
+    translate: -50% 0;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #7d6b5c, #e4d9c8 45%, #7d6b5c);
+  }
+  .rk__base {
+    width: calc(var(--card-w) * 1.5);
+    height: 1.1rem;
+    margin-top: -0.4rem;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(19 30 36 / 0.35), transparent);
+  }
+  .rk__controls {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-top: 1rem;
+  }
+  /* Small tickets with a clipped corner, like the buttons (D-078): ink outline (::before), a
+   * postcard-white face (::after), a mustard shadow that follows the cut (drop-shadow). */
+  .rk__btn {
+    --cut: 0.5rem;
+    --face: var(--paper-raised);
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    place-items: center;
+    width: var(--tap-min);
+    height: var(--tap-min);
+    margin: 0 3px 3px 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    filter: drop-shadow(3px 3px 0 var(--accent-ochre));
+    transition: filter var(--dur-ui) var(--ease-out-strong);
+  }
+  .rk__btn::before,
+  .rk__btn::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+  }
+  /* only the drawn layers and the icon move, so the hit area stays under the pointer */
+  .rk__btn::before,
+  .rk__btn::after,
+  .rk__btn > svg {
+    transition:
+      translate var(--dur-ui) var(--ease-out-strong),
+      scale var(--dur-press) var(--ease-out-strong),
+      background-color var(--dur-ui) ease;
+  }
+  .rk__btn::before {
+    inset: 0;
+    background: var(--ink);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%);
+  }
+  .rk__btn::after {
+    --cut-in: calc(var(--cut) - 0.586 * var(--line-w));
+    inset: var(--line-w);
+    background: var(--face);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--cut-in)), calc(100% - var(--cut-in)) 100%, 0 100%);
+  }
+  /* the pause / play ticket is mustard, so it reads as the rack's switch */
+  .rk__btn--play {
+    --face: var(--accent-ochre);
+    filter: drop-shadow(3px 3px 0 var(--paper-raised));
+  }
+  .rk__btn:focus-visible {
+    outline-offset: 4px;
+    border-radius: 0;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .rk__btn:hover {
+      filter: drop-shadow(5px 5px 0 var(--accent-ochre));
+    }
+    .rk__btn--play:hover {
+      filter: drop-shadow(5px 5px 0 var(--paper-raised));
+    }
+    .rk__btn:hover::before,
+    .rk__btn:hover::after,
+    .rk__btn:hover > svg {
+      translate: -2px -2px;
+    }
+  }
+  .rk__btn:active {
+    filter: drop-shadow(1px 1px 0 var(--accent-ochre));
+  }
+  .rk__btn:active::before,
+  .rk__btn:active::after,
+  .rk__btn:active > svg {
+    translate: 2px 2px;
+    scale: 0.94;
+  }
+  .rk__btn--play:active {
+    filter: drop-shadow(1px 1px 0 var(--paper-raised));
+  }
+  .rk__hint {
+    margin-top: 0.6rem;
+    font-family: var(--ff-script);
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+  .rk__detail-in {
+    animation: rk-in 280ms var(--ease-out-strong) both;
+  }
+  @keyframes rk-in {
+    from {
+      opacity: 0;
+      filter: blur(4px);
+      transform: translateY(6px);
+    }
+  }
+
+  /* ── oatly.com reference: drum counter (Odometer) ─────────────────────── */
+  .od {
+    display: inline-block;
+    line-height: 1;
+  }
+  .od__row {
+    display: inline-flex;
+    align-items: flex-start;
+    perspective: 32rem;
+    transform-style: preserve-3d;
+  }
+  .od__drum {
+    display: inline-block;
+    height: 1em;
+    overflow: hidden;
+  }
+  .od__strip {
+    display: flex;
+    flex-direction: column;
+    transform: translateY(calc(var(--n) * -1em));
+  }
+  .od__strip > span {
+    display: block;
+    height: 1em;
+    line-height: 1;
+    text-align: center;
+  }
+  .od__sep {
+    display: inline-block;
+    height: 1em;
+    line-height: 1;
+  }
+  .od[data-state="armed"] .od__strip {
+    transform: translateY(0);
+  }
+  .od[data-state="rolling"] .od__strip,
+  .od[data-state="landed"] .od__strip {
+    transition: transform 1000ms var(--ease-out-strong);
+    transition-delay: calc(var(--od-delay, 0ms) + var(--k, 0) * 80ms);
+  }
+  .od[data-state="landed"] .od__row {
+    animation: od-maxed 640ms var(--ease-out-strong);
+  }
+  @keyframes od-maxed {
+    15% {
+      transform: rotateX(-16deg);
+    }
+    55% {
+      transform: rotateX(7deg);
+    }
+    100% {
+      transform: none;
+    }
+  }
+
+  /* ── Still states ─────────────────────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    html:not([data-motion="full"]) :is(.ll__ch, .rk__detail-in, .od__row, .cs__sink) {
+      animation: none !important;
+    }
+    html:not([data-motion="full"]) :is(.od__strip, .pf__card) {
+      transition: none !important;
+    }
+  }
+  html[data-motion="reduce"] :is(.ll__ch, .rk__detail-in, .od__row, .cs__sink) {
+    animation: none !important;
+  }
+  html[data-motion="reduce"] :is(.od__strip, .pf__card) {
+    transition: none !important;
+  }
+}

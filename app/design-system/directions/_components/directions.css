@@ -1,0 +1,266 @@
+/* Direction boards: collage and hero-frame materials. Global CSS, `dir-` prefix. Tokens only. */
+
+/* Same layer order as Tailwind v4, declared here too so it holds whichever stylesheet loads first.
+ * Component styles live in `components`, so Tailwind utilities passed via className win. */
+@layer theme, base, components, utilities;
+
+@layer components {
+  /* ── Shared materials ─────────────────────────────────────────────── */
+  .dir-kraft {
+    background-color: color-mix(in srgb, var(--paper-edge) 62%, var(--paper-deep));
+    background-image: var(--texture-fibre), var(--texture-grain), var(--texture-grain);
+    background-size: 400px 400px, var(--texture-grain-size), var(--texture-grain-size);
+  }
+
+  .dir-desk {
+    background-color: var(--desk);
+    background-image: var(--texture-fibre), var(--texture-grain);
+    background-size: 400px 400px, var(--texture-grain-size);
+  }
+
+  .dir-sunfade {
+    /* A sun-bleached wash: light pooling from the top right, the way a postcard fades in a window.
+       Opaque stops only (fading to transparent greys out in some WebKit builds). */
+    background-image:
+      var(--texture-grain),
+      radial-gradient(120% 80% at 85% 0%, var(--paper-raised), var(--paper) 62%);
+    background-size: var(--texture-grain-size), 100% 100%;
+  }
+
+  .dir-tape {
+    position: absolute;
+    height: 1.25rem;
+    background:
+      repeating-linear-gradient(90deg, color-mix(in srgb, var(--paper-raised) 25%, transparent) 0 2px, transparent 2px 7px),
+      color-mix(in srgb, var(--tape, var(--paper-shadow)) 70%, transparent);
+    mix-blend-mode: multiply;
+    clip-path: polygon(0 0, 3px 20%, 0 40%, 3px 60%, 0 80%, 3px 100%, calc(100% - 3px) 100%, 100% 80%, calc(100% - 3px) 60%, 100% 40%, calc(100% - 3px) 20%, 100% 0);
+    pointer-events: none;
+  }
+
+  /* Vintage postcard back: "POST CARD" header, divider, address lines, stamp box. */
+  .dir-postcard {
+    position: absolute;
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 0;
+    padding: 0.75rem 0.85rem 0.9rem;
+    border-radius: var(--r-paper);
+    background-color: var(--paper-raised);
+    background-image: var(--texture-fibre), var(--texture-grain);
+    background-size: 400px 400px, var(--texture-grain-size);
+    box-shadow: var(--elev-paper);
+  }
+  .dir-postcard__head {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-family: var(--ff-display);
+    font-size: 0.875rem;
+    letter-spacing: 0.32em;
+    color: var(--accent-terracotta-ink);
+    border-bottom: 1px solid color-mix(in srgb, var(--accent-terracotta) 40%, transparent);
+    padding-bottom: 0.35rem;
+    margin-bottom: 0.5rem;
+  }
+  .dir-postcard__msg {
+    padding-right: 0.6rem;
+    border-right: 1px solid color-mix(in srgb, var(--accent-terracotta) 45%, transparent);
+    font-family: var(--ff-hand);
+    font-size: 1.05rem;
+    line-height: 1.25;
+    color: var(--ink-letter);
+  }
+  .dir-postcard__addr {
+    position: relative;
+    padding-left: 0.6rem;
+    padding-top: 2.4rem;
+  }
+  .dir-postcard__line {
+    height: 1.15rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--ink-faded) 40%, transparent);
+    font-family: var(--ff-hand);
+    font-size: 1rem;
+    line-height: 1.15rem;
+    color: var(--ink-letter);
+  }
+  .dir-postcard__box {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 2rem;
+    height: 2.4rem;
+    border: 1px dashed color-mix(in srgb, var(--ink-faded) 55%, transparent);
+    display: grid;
+    place-items: center;
+    font-family: var(--ff-postal);
+    font-size: 0.45rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-faded);
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  /* Ticket stub (Desk Drawer). */
+  .dir-ticket {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.9rem;
+    background-color: var(--accent-ochre);
+    background-image: var(--texture-grain);
+    background-size: var(--texture-grain-size);
+    color: var(--ink);
+    font-family: var(--ff-postal);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    -webkit-mask:
+      radial-gradient(circle 5px at 0 50%, transparent 96%, black 100%),
+      radial-gradient(circle 5px at 100% 50%, transparent 96%, black 100%);
+    -webkit-mask-composite: source-in;
+    mask:
+      radial-gradient(circle 5px at 0 50%, transparent 96%, black 100%),
+      radial-gradient(circle 5px at 100% 50%, transparent 96%, black 100%);
+    mask-composite: intersect;
+    filter: var(--elev-stamp-drop);
+  }
+  .dir-ticket__no {
+    border-left: 1.5px dashed color-mix(in srgb, var(--ink) 45%, transparent);
+    padding-left: 0.6rem;
+    font-size: 0.85rem;
+  }
+
+  /* Typewritten label strip (Dymo-ish but paper). */
+  .dir-label {
+    position: absolute;
+    padding: 0.2rem 0.55rem;
+    background: var(--paper-raised);
+    font-family: var(--ff-postal);
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    color: var(--ink);
+    box-shadow: var(--elev-flat);
+  }
+
+  /* Rubber stamp mark (RECOMMENDED / AIR MAIL): double ruled box in speckled ink. */
+  .dir-rubber {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.65rem;
+    border: 2px solid currentColor;
+    outline: 1px solid currentColor;
+    outline-offset: 2px;
+    border-radius: var(--r-paper);
+    font-family: var(--ff-postal);
+    font-size: 0.8125rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent-red);
+    -webkit-mask: var(--texture-ink) 0 0 / var(--texture-ink-size);
+    mask: var(--texture-ink) 0 0 / var(--texture-ink-size);
+    mix-blend-mode: multiply;
+  }
+
+  /* Letterpress: debossed card and blind-embossed type (Quiet Letterpress). */
+  .dir-deboss {
+    background-color: var(--paper-raised);
+    background-image: var(--texture-fibre);
+    background-size: 400px 400px;
+    box-shadow:
+      inset 0 1px 2px color-mix(in srgb, var(--paper-shadow) 90%, transparent),
+      inset 0 -1px 0 color-mix(in srgb, var(--paper-raised) 80%, transparent),
+      var(--elev-flat);
+  }
+  .dir-deboss--frame::after {
+    content: "";
+    position: absolute;
+    inset: 0.7rem;
+    border-radius: 1px;
+    pointer-events: none;
+    box-shadow:
+      inset 0 1px 1px color-mix(in srgb, var(--paper-shadow) 100%, transparent),
+      0 1px 0 color-mix(in srgb, var(--paper-raised) 100%, transparent);
+  }
+  .dir-blind {
+    color: var(--paper-raised);
+    text-shadow:
+      0 -1px 0 color-mix(in srgb, var(--paper-edge) 70%, transparent),
+      0 1px 0 color-mix(in srgb, var(--paper-raised) 100%, transparent);
+  }
+
+  /* ── Phone hero frame ─────────────────────────────────────────────── */
+  .dir-phone {
+    position: relative;
+    width: 18.5rem;
+    max-width: 100%;
+    margin-inline: auto;
+    padding: 0.55rem;
+    border-radius: calc(var(--r-sheet) * 2);
+    background: var(--vinyl);
+    box-shadow: var(--elev-lifted);
+  }
+  .dir-phone::before {
+    /* speaker / camera pill */
+    content: "";
+    position: absolute;
+    top: 1.05rem;
+    left: 50%;
+    z-index: 3;
+    width: 4.75rem;
+    height: 1.15rem;
+    transform: translateX(-50%);
+    border-radius: var(--r-pill);
+    background: var(--vinyl);
+  }
+  .dir-phone__screen {
+    position: relative;
+    height: 38.5rem;
+    overflow: hidden;
+    border-radius: calc(var(--r-sheet) * 1.6);
+    isolation: isolate;
+  }
+
+  /* Envelope face used in the hero frames. */
+  .dir-env {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    border-radius: var(--r-paper);
+  }
+  .dir-env--a {
+    background-color: var(--paper-deep);
+    background-image: var(--texture-fibre), var(--texture-grain);
+    background-size: 400px 400px, var(--texture-grain-size);
+    box-shadow: var(--elev-envelope);
+  }
+  .dir-env--b {
+    box-shadow: var(--elev-envelope);
+  }
+  .dir-env--c {
+    box-shadow: var(--elev-paper);
+  }
+
+  /* Airmail edge for direction B's envelope */
+  .dir-airmail {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 7px;
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--accent-red) 0 9px,
+      transparent 9px 14px,
+      var(--postmark) 14px 23px,
+      transparent 23px 28px
+    );
+    -webkit-mask:
+      linear-gradient(black 0 0) content-box,
+      linear-gradient(black 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(black 0 0) content-box exclude,
+      linear-gradient(black 0 0);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+}

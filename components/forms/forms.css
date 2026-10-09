@@ -1,0 +1,417 @@
+/*
+ * Form primitives: fields that feel like filling in a postcard or a post-office form.
+ * Global CSS with an `sd-` prefix (the project's turbopack CSS rule disables CSS Modules).
+ */
+
+/* Same layer order as Tailwind v4, declared here too so it holds whichever stylesheet loads first.
+ * Component styles live in `components`, so Tailwind utilities passed via className win. */
+@layer theme, base, components, utilities;
+
+@layer components {
+  /* ── StampedInput / StampedTextarea ───────────────────────────────────── */
+  .sd-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  .sd-field__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .sd-field__label {
+    font-family: var(--ff-ui);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+  }
+
+  .sd-field__counter {
+    font-family: var(--ff-postal);
+    font-size: var(--text-postal);
+    letter-spacing: 0.06em;
+    color: var(--ink-faded);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .sd-field__counter[data-over="true"] {
+    color: var(--danger);
+  }
+
+  /* Boxed field: square cream box, ink border; focus = cobalt border + a hard cobalt shadow. */
+  .sd-field__line {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    padding: 0.3rem 0.9rem;
+    border: var(--line-w) solid var(--ink);
+    border-radius: var(--r-soft);
+    background: var(--paper-raised);
+    transition:
+      border-color var(--motion-dur-fast) var(--motion-ease-out),
+      box-shadow var(--motion-dur-fast) var(--motion-ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sd-field__line:hover {
+      border-color: var(--ink-soft);
+    }
+  }
+  /* Focus appears at once (never animated: it follows the keyboard) */
+  .sd-field:focus-within .sd-field__line {
+    border-color: var(--focus-ring);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus-ring) 22%, transparent);
+  }
+  /* Handwriting fields keep the writing line: no box, a ruled baseline. */
+  .sd-field__line:has(.sd-field__control--hand) {
+    padding: 0.3rem 0.2rem 0.35rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: inset 0 -1.5px 0 color-mix(in srgb, var(--ink-faded) 55%, transparent);
+  }
+  /* the handwritten field (Dear ___, the sign-off) is a 44px target itself */
+  .sd-field__control--hand {
+    min-height: var(--tap-min);
+  }
+  .sd-field:focus-within .sd-field__line:has(.sd-field__control--hand) {
+    box-shadow: inset 0 -2.5px 0 var(--focus-ring);
+  }
+  .sd-field[data-invalid="true"] .sd-field__line {
+    border-color: var(--danger);
+  }
+  .sd-field[data-invalid="true"] .sd-field__line:has(.sd-field__control--hand) {
+    box-shadow: inset 0 -2px 0 var(--danger);
+  }
+  .sd-field[data-disabled="true"] .sd-field__line {
+    opacity: 0.6;
+  }
+
+  .sd-field__prefix {
+    flex: none;
+    font-family: var(--ff-hand);
+    font-size: 1.5rem;
+    line-height: 1.3;
+    color: var(--ink-faded);
+  }
+
+  .sd-field__control {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+    min-height: var(--tap-min);
+    padding: 0.3rem 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    resize: none;
+  }
+  /* The line itself carries the focus indicator (2.5px ink underline + lighter paper). */
+  .sd-field__control:focus-visible {
+    outline: none;
+  }
+  .sd-field__control::placeholder {
+    color: var(--ink-faded);
+    opacity: 0.75;
+  }
+
+  /* "display" fields (names, titles): the UI face, a size up and a touch heavier */
+  .sd-field__control--display {
+    --sd-line: calc(1.125rem * 1.4);
+    font-family: var(--ff-ui);
+    font-size: 1.125rem;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+  .sd-field__control--ui {
+    --sd-line: calc(1rem * 1.45);
+    font-family: var(--ff-ui);
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+  .sd-field__control--hand {
+    font-family: var(--ff-hand);
+    font-size: var(--text-letter);
+    line-height: var(--leading-letter);
+    color: var(--ink-letter);
+  }
+
+  /* Textarea: ruled lines that move with the text. */
+  textarea.sd-field__control {
+    display: block;
+    padding-block: 0.25rem;
+    overflow-y: auto;
+  }
+  .sd-field--ruled textarea.sd-field__control {
+    background-image: linear-gradient(to bottom, transparent calc(100% - 1px), var(--paper-rule) calc(100% - 1px));
+    background-size: 100% var(--sd-line, var(--rule-letter));
+    background-attachment: local;
+    background-position: 0 0.25rem;
+  }
+  .sd-field--ruled .sd-field__line {
+    box-shadow: none;
+  }
+
+  .sd-field__hint {
+    font-family: var(--ff-ui);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--ink-faded);
+  }
+
+  .sd-field__error {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    font-family: var(--ff-ui);
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--danger);
+  }
+  .sd-field__error svg {
+    flex: none;
+    margin-top: 0.05rem;
+  }
+
+  /* ── CodeInput ─────────────────────────────────────────────────────────── */
+  .sd-code {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* The row is a container: "SAUD-" and the four boxes size to the room the row really has
+   * (cqi), never past the card on a 320px phone; from about 360px up they reach full size. */
+  .sd-code__row {
+    position: relative;
+    container-type: inline-size;
+    display: flex;
+    align-items: center;
+    gap: clamp(0.375rem, 2.2vw, 0.625rem);
+  }
+
+  .sd-code__prefix {
+    font-family: var(--ff-postal);
+    font-size: min(clamp(1.45rem, 7vw, 2rem), 8cqi);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    margin-inline-end: 0.15rem;
+    user-select: none;
+  }
+
+  .sd-code__box {
+    width: min(clamp(2.85rem, 13.5vw, 3.75rem), 15.5cqi);
+    height: clamp(3rem, 16.5vw, 4.5rem);
+    padding: 0;
+    border: var(--line-w) dashed color-mix(in srgb, var(--ink) 45%, transparent);
+    border-radius: var(--r-soft);
+    background: var(--paper-raised);
+    color: var(--ink);
+    caret-color: var(--accent-red);
+    font-family: var(--ff-postal);
+    font-size: min(clamp(1.7rem, 8vw, 2.2rem), 9.5cqi);
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+    transition: transform var(--motion-dur-fast) var(--motion-ease-paper);
+  }
+  .sd-code__box[data-filled="true"] {
+    border: var(--line-w) solid var(--ink);
+    background-color: var(--paper-raised);
+    background-image: var(--texture-grain);
+    background-size: var(--texture-grain-size);
+    box-shadow: var(--elev-print-sm);
+    transform: rotate(var(--tilt, 0deg));
+  }
+  .sd-code__box:focus-visible,
+  .sd-code__box:focus {
+    outline: none;
+    border-style: solid;
+    border-color: var(--focus-ring);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus-ring) 22%, transparent);
+  }
+  .sd-code__box:disabled {
+    opacity: 0.55;
+  }
+
+  .sd-code[data-state="checking"] .sd-code__box {
+    opacity: 0.7;
+  }
+  .sd-code[data-invalid="true"] .sd-code__box {
+    border-color: var(--danger);
+  }
+  .sd-code[data-state="error"] .sd-code__row {
+    animation: sd-shake 360ms var(--motion-ease-out) both;
+  }
+  .sd-code[data-state="success"] .sd-code__box {
+    border-color: var(--success);
+  }
+
+  .sd-code__box[data-nudge="a"] {
+    animation: sd-nudge-a 420ms var(--motion-ease-out);
+  }
+  .sd-code__box[data-nudge="b"] {
+    animation: sd-nudge-b 420ms var(--motion-ease-out);
+  }
+
+  @keyframes sd-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    45% { transform: translateX(5px); }
+    70% { transform: translateX(-3px); }
+  }
+  /* Each character lands like a digit on the oatly.com drum counter: it rolls in on the X axis,
+   * overshoots a touch and settles at its tilt. */
+  @keyframes sd-nudge-a {
+    0% { transform: perspective(16rem) rotateX(-95deg) rotate(var(--tilt, 0deg)); }
+    60% { transform: perspective(16rem) rotateX(16deg) rotate(var(--tilt, 0deg)); }
+    100% { transform: perspective(16rem) rotateX(0deg) rotate(var(--tilt, 0deg)); }
+  }
+  @keyframes sd-nudge-b {
+    0% { transform: perspective(16rem) rotateX(95deg) rotate(var(--tilt, 0deg)); }
+    60% { transform: perspective(16rem) rotateX(-16deg) rotate(var(--tilt, 0deg)); }
+    100% { transform: perspective(16rem) rotateX(0deg) rotate(var(--tilt, 0deg)); }
+  }
+
+  /* Success: a postmark is pressed over the code. Base style = the landed state. */
+  .sd-code__stamp {
+    position: absolute;
+    right: -0.35rem;
+    top: 50%;
+    margin-top: -3rem;
+    pointer-events: none;
+    transform: rotate(-12deg);
+    animation: sd-press 420ms var(--motion-ease-paper) both;
+  }
+  @keyframes sd-press {
+    0% { opacity: 0; transform: scale(1.7) rotate(-4deg); }
+    55% { opacity: 1; transform: scale(0.94) rotate(-13deg); }
+    100% { opacity: 1; transform: scale(1) rotate(-12deg); }
+  }
+
+  .sd-code__msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    min-height: 1.4rem;
+    font-family: var(--ff-ui);
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+  .sd-code__msg[data-tone="error"] {
+    color: var(--danger);
+  }
+  .sd-code__msg[data-tone="hint"] {
+    color: var(--accent-ochre-ink);
+  }
+  .sd-code__msg[data-tone="success"] {
+    color: var(--success);
+  }
+  .sd-code__msg svg {
+    flex: none;
+    margin-top: 0.05rem;
+  }
+
+  /* ── UploadTile ────────────────────────────────────────────────────────── */
+  .sd-upload {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 8rem;
+    padding: 1.25rem 1rem;
+    border: var(--line-w) dashed color-mix(in srgb, var(--ink) 50%, transparent);
+    border-radius: var(--r-card);
+    background-color: var(--paper-raised);
+    background-image: var(--texture-grid);
+    background-size: var(--texture-grid-size);
+    color: var(--ink-soft);
+    text-align: center;
+    cursor: pointer;
+    transition: background-color var(--motion-dur-fast) var(--motion-ease-out), border-color var(--motion-dur-fast) var(--motion-ease-out);
+  }
+  .sd-upload:has(input:focus-visible) {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sd-upload:hover:not([data-disabled="true"]) {
+      border-color: var(--ink);
+      border-style: solid;
+    }
+  }
+  .sd-upload[data-dragging="true"] {
+    border-style: solid;
+    border-color: var(--accent-red);
+    background: color-mix(in srgb, var(--accent-rose) 30%, var(--paper-raised));
+    color: var(--accent-red-ink);
+  }
+  .sd-upload[data-disabled="true"] {
+    cursor: not-allowed;
+    border-style: dotted;
+    background: color-mix(in srgb, var(--paper-deep) 35%, transparent);
+    color: var(--ink-faded);
+  }
+
+  .sd-upload__icon {
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    border: var(--line-w) solid var(--ink);
+    border-radius: 50%;
+    background: var(--accent-ochre);
+    color: var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+    transition: transform var(--motion-dur-base) var(--motion-ease-paper);
+  }
+  .sd-upload[data-dragging="true"] .sd-upload__icon {
+    transform: translateY(-3px) scale(1.08);
+  }
+  .sd-upload:active:not([data-disabled="true"]) .sd-upload__icon {
+    transform: scale(0.94);
+  }
+
+  .sd-upload__label {
+    font-family: var(--ff-display);
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+    color: var(--ink);
+  }
+  .sd-upload[data-disabled="true"] .sd-upload__label {
+    color: var(--ink-soft);
+  }
+  .sd-upload[data-dragging="true"] .sd-upload__label {
+    color: inherit;
+  }
+
+  .sd-upload__hint {
+    font-family: var(--ff-ui);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--ink-faded);
+  }
+
+  /* Reduced motion: no shakes/nudges/press; states stay readable by colour + text + icon. */
+  @media (prefers-reduced-motion: reduce) {
+    html:not([data-motion="full"]) :is(.sd-code__row, .sd-code__box, .sd-code__stamp) {
+      animation: none !important;
+    }
+  }
+  html[data-motion="reduce"] :is(.sd-code__row, .sd-code__box, .sd-code__stamp) {
+    animation: none !important;
+  }
+}

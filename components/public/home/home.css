@@ -1,0 +1,1941 @@
+/*
+ * Home page (S1), "Wish You Were Here" (D-060). Prefixed global CSS (`hm-`) in
+ * @layer components so Tailwind utilities on the same elements still win.
+ * Motion by Emil Kowalski's rules: every animation has a job; ease-out for entering and
+ * responding, ease-in-out for moving on screen, linear only for constant motion (the plane);
+ * hover effects only for real pointers; transform/opacity/clip-path only; still states for
+ * reduced motion.
+ */
+@layer theme, base, components, utilities;
+
+@layer components {
+  /* ── 1. Hero ───────────────────────────────────────────────────────────── */
+  .hm-hero {
+    --perf: 9px;
+    position: relative;
+    overflow: hidden;
+    -webkit-mask: radial-gradient(circle at 50% 100%, transparent var(--perf), #000 calc(var(--perf) + 0.5px)) bottom / calc(var(--perf) * 3) 100% repeat-x;
+    mask: radial-gradient(circle at 50% 100%, transparent var(--perf), #000 calc(var(--perf) + 0.5px)) bottom / calc(var(--perf) * 3) 100% repeat-x;
+  }
+  .hm-hero__sun {
+    position: absolute;
+    left: 50%;
+    bottom: 14%;
+    width: min(70vw, 40rem);
+    aspect-ratio: 1;
+    translate: -50% 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgb(255 222 140 / 0.95) 0 55%, rgb(255 222 140 / 0) 70%);
+    pointer-events: none;
+  }
+  .hm-hero__inner {
+    position: relative;
+    z-index: 2;
+    /* the header floats over the sky; content starts just below the plane's flight path */
+    padding-top: calc(var(--head-h, 4.75rem) + clamp(3rem, 1.25rem + 3.5vw, 4.25rem));
+    text-align: center;
+  }
+  /* The airmail label (the `tag` utility), stuck on a little crooked */
+  .hm-hero__tag {
+    rotate: -1.5deg;
+    white-space: normal;
+    text-align: center;
+    /* on a phone it takes two even lines, not one long line and an orphan */
+    text-wrap: balance;
+  }
+  .hm-hero__title {
+    margin-top: 1.4rem;
+  }
+  .hm-hero__greet {
+    display: block;
+    font-size: var(--fs-script);
+    color: var(--accent-navy);
+  }
+  /* The large letters: never taller than a fifth of the screen (so the buttons stay above the
+   * fold on a short laptop), and from tablets up never wider than one line ("MISSES YOU" sets
+   * at 6.91× its size; at 1536px wide the cap used to break it onto two lines). */
+  .hm-hero__ll {
+    margin-top: 0.08em;
+    font-size: min(var(--fs-mega), 21svh);
+  }
+  @media (min-width: 48rem) {
+    .hm-hero__ll {
+      font-size: min(var(--fs-mega), 21svh, calc(min(var(--measure-page), 100vw - 2 * var(--gutter)) / 7.1));
+    }
+  }
+  /* the words and buttons always sit above the letters' shadows */
+  .hm-hero__lede,
+  .hm-hero__ctas {
+    position: relative;
+    z-index: 3;
+  }
+  .hm-hero__lede {
+    max-width: 40rem;
+    margin: 2rem auto 0;
+    font-size: var(--fs-lede);
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .hm-hero__ctas {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem 1rem;
+    margin-top: 2rem;
+  }
+
+  /* A biplane towing a banner across the sky: the crossing is constant motion, so linear; the
+   * plane rides the air (a slow bob and pitch, ease-in-out); the banner flutters behind it. */
+  .hm-plane {
+    position: absolute;
+    top: calc(var(--head-h, 4.75rem) + clamp(0rem, -0.3rem + 0.8vw, 0.5rem));
+    left: 0;
+    z-index: 1;
+    width: 100%;
+    pointer-events: none;
+  }
+  .hm-plane__bob {
+    display: flex;
+    align-items: center;
+    width: max-content;
+    animation: hm-fly 38s linear infinite;
+  }
+  @keyframes hm-fly {
+    from {
+      transform: translateX(105vw);
+    }
+    to {
+      transform: translateX(-130%);
+    }
+  }
+  .hm-plane__craft {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    width: clamp(4.75rem, 3.6rem + 3.6vw, 7.5rem);
+    filter: drop-shadow(0 6px 5px rgb(19 30 36 / 0.16));
+    animation: hm-bob 3.2s var(--motion-ease-in-out) infinite alternate;
+  }
+  @keyframes hm-bob {
+    from {
+      translate: 0 -3px;
+      rotate: -1.5deg;
+    }
+    to {
+      translate: 0 4px;
+      rotate: 1deg;
+    }
+  }
+  .hm-plane__prop {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: hm-prop 120ms linear infinite;
+  }
+  @keyframes hm-prop {
+    50% {
+      transform: scaleY(0.15);
+    }
+  }
+  .hm-plane__scarf {
+    transform-box: fill-box;
+    transform-origin: 0% 40%;
+    animation: hm-scarf 420ms var(--motion-ease-in-out) infinite alternate;
+  }
+  @keyframes hm-scarf {
+    to {
+      transform: skewY(-9deg) scaleX(0.9);
+    }
+  }
+  /* The tow: a bridle, then the banner, fluttering from its leading edge */
+  .hm-plane__tow {
+    display: flex;
+    align-items: stretch;
+    margin-left: -0.2rem;
+    transform-origin: 0% 50%;
+    /* on the wrapper: the banner's clip-path would cut its own shadow off */
+    filter: drop-shadow(0 4px 4px rgb(19 30 36 / 0.14));
+    animation: hm-tow 3.2s var(--motion-ease-in-out) infinite alternate;
+  }
+  @keyframes hm-tow {
+    from {
+      rotate: 1.5deg;
+    }
+    to {
+      rotate: -1deg;
+    }
+  }
+  .hm-plane__rope {
+    flex: none;
+    width: clamp(1.75rem, 1.2rem + 2vw, 3.25rem);
+    height: auto;
+    overflow: visible;
+  }
+  .hm-plane__banner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0.42rem 1.7rem 0.36rem 0.95rem;
+    /* the leading edge is a navy batten the bridle ties to */
+    border-left: 5px solid var(--accent-navy);
+    background-color: var(--paper-raised);
+    /* folds in the cloth */
+    background-image: repeating-linear-gradient(90deg, transparent 0 1.6rem, rgb(47 35 27 / 0.07) 1.6rem 2.2rem, transparent 2.2rem 2.9rem);
+    color: var(--accent-navy);
+    font-family: var(--ff-display);
+    font-size: clamp(0.7rem, 0.6rem + 0.35vw, 0.92rem);
+    letter-spacing: 0.07em;
+    line-height: 1.1;
+    text-transform: uppercase;
+    white-space: nowrap;
+    clip-path: polygon(0 0, 100% 0, calc(100% - 0.85rem) 50%, 100% 100%, 0 100%);
+    transform-origin: 0% 50%;
+    animation: hm-flutter 900ms var(--motion-ease-in-out) infinite alternate;
+  }
+  /* stitched hems along the top and bottom */
+  .hm-plane__banner::before {
+    content: "";
+    position: absolute;
+    inset: 3px 0 3px 0;
+    border-block: 1.5px dashed color-mix(in srgb, var(--accent-red) 70%, transparent);
+    pointer-events: none;
+  }
+  @keyframes hm-flutter {
+    from {
+      transform: skewY(-0.8deg) scaleY(1);
+    }
+    to {
+      transform: skewY(1deg) scaleY(0.96);
+    }
+  }
+
+  /* Postcards tucked behind the perforated edge */
+  /* The postcards sit in the flow under the buttons (so the hero grows around them and they can
+   * never reach the buttons), and tuck behind the perforated edge: the negative bottom margin lets
+   * the hero's edge cut them off. The gap is larger than their scroll rise (below). */
+  .hm-hero__peek {
+    position: relative;
+    z-index: 1;
+    margin-top: clamp(5.5rem, 3.5rem + 5vw, 8.5rem);
+    margin-bottom: -3.5rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: clamp(0.75rem, 3vw, 3rem);
+    pointer-events: none;
+  }
+  .hm-peek {
+    position: relative;
+    flex: none;
+    pointer-events: auto;
+    transition: translate var(--dur-ui) var(--ease-out-strong);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .hm-peek:hover {
+      translate: 0 -14px;
+    }
+  }
+  /* hit slop for the rise, so the pointer can't slip off a turned edge and flicker */
+  .hm-peek::after {
+    content: "";
+    position: absolute;
+    inset: -6px -6px -18px;
+  }
+  .hm-peek--a {
+    width: clamp(9.5rem, 6rem + 11vw, 16rem);
+    padding: 8px 8px 0;
+    rotate: -7deg;
+  }
+  .hm-peek__img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    border-radius: 6px;
+    object-fit: cover;
+  }
+  .hm-peek__cap {
+    padding: 0.3rem 0.2rem 1.2rem;
+    font-family: var(--ff-hand), var(--ff-hand-fallback);
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--ink-letter);
+  }
+  .hm-peek--b {
+    width: clamp(11rem, 7rem + 13vw, 18.5rem);
+    aspect-ratio: 3 / 2;
+    margin-bottom: 1.5rem;
+    border-radius: var(--r-paper);
+    background-color: var(--paper-raised);
+    background-image: var(--texture-fibre), var(--texture-grain);
+    background-size:
+      400px 400px,
+      var(--texture-grain-size);
+    box-shadow: var(--elev-envelope);
+    rotate: 3deg;
+  }
+  .hm-peek--b > svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .hm-peek__seal {
+    position: absolute;
+    top: 58%;
+    left: 50%;
+    translate: -50% -50%;
+  }
+  .hm-peek__for {
+    position: absolute;
+    bottom: 8%;
+    left: 7%;
+    font-family: var(--ff-hand);
+    font-size: clamp(1.3rem, 1rem + 1vw, 1.9rem);
+    line-height: 1;
+    color: var(--ink-letter);
+  }
+  .hm-peek--c {
+    width: clamp(10rem, 6.5rem + 11vw, 16.5rem);
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    border-radius: var(--r-card);
+    box-shadow: var(--elev-card);
+    rotate: 8deg;
+  }
+  @media (max-width: 47.99rem) {
+    .hm-peek--c {
+      display: none;
+    }
+    .hm-peek--a {
+      rotate: -9deg;
+    }
+  }
+
+  /* Depth on scroll (pitch.com pattern): the peeking postcards rise faster than the page and the
+   * sun sinks slower. CSS scroll timelines run off the main thread; elsewhere the hero is still. */
+  @supports (animation-timeline: scroll()) {
+    .hm-hero__peek {
+      animation: hm-peek-rise linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 75vh;
+    }
+    .hm-hero__sun {
+      animation: hm-sun-sink linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 90vh;
+    }
+  }
+  @keyframes hm-peek-rise {
+    to {
+      transform: translateY(-2.5rem);
+    }
+  }
+  @keyframes hm-sun-sink {
+    to {
+      transform: translateY(6rem) scale(1.08);
+    }
+  }
+
+  /* ── 2. Postcards that turn over ───────────────────────────────────────── */
+  .hm-front {
+    position: absolute;
+    inset: 0;
+    padding: var(--border-card);
+    background: var(--paper-raised);
+  }
+  .hm-scene {
+    position: relative;
+    display: grid;
+    place-items: center;
+    height: 100%;
+    overflow: hidden;
+    border-radius: calc(var(--r-card) - 6px);
+    background-image: var(--texture-linen-light), var(--texture-rays), var(--scene);
+    background-size:
+      var(--texture-linen-size),
+      100% 100%,
+      100% 100%;
+  }
+  .hm-scene--sun {
+    --scene: var(--grad-sunset);
+  }
+  .hm-scene--sky {
+    --scene: var(--grad-sky);
+  }
+  .hm-scene--coral {
+    --scene: linear-gradient(180deg, #f6b9a3 0%, #f07a5a 100%);
+  }
+  .hm-scene__n {
+    position: absolute;
+    top: 0.35rem;
+    left: 0.7rem;
+    font-family: var(--ff-display);
+    font-size: clamp(2.4rem, 2rem + 1.4vw, 3.2rem);
+    line-height: 1;
+    color: var(--paper-raised);
+    -webkit-text-stroke: 2px var(--accent-navy);
+    paint-order: stroke fill;
+    text-shadow: 3px 3px 0 var(--accent-navy);
+  }
+  .hm-scene__art {
+    translate: 0 -0.6rem;
+  }
+  .hm-scene__title {
+    position: absolute;
+    right: 0;
+    bottom: 0.5rem;
+    left: 0;
+    font-family: var(--ff-script);
+    font-size: clamp(1.6rem, 1.3rem + 1vw, 2.05rem);
+    font-weight: 400;
+    line-height: 1;
+    text-align: center;
+    color: var(--accent-navy);
+  }
+  .hm-ticket {
+    display: grid;
+    gap: 0.15rem;
+    padding: 0.65rem 0.9rem;
+    border: var(--line-w) solid var(--ink);
+    border-radius: 8px;
+    background: var(--paper-raised);
+    box-shadow: var(--elev-print-sm);
+    rotate: -6deg;
+    text-align: left;
+  }
+  .hm-ticket__label {
+    font-family: var(--ff-postal);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faded);
+  }
+  .hm-ticket__code {
+    font-family: var(--ff-postal);
+    font-size: clamp(1.15rem, 1rem + 0.6vw, 1.4rem);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+  }
+  .hm-ticket__note {
+    font-size: 0.7rem;
+    color: var(--ink-faded);
+  }
+  .hm-four {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    gap: 0.2rem 0.6rem;
+  }
+  .hm-four > span {
+    rotate: var(--r);
+  }
+
+  /* The back of a postcard */
+  .hm-back {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0.8rem 1rem 0.9rem;
+    background-color: var(--paper-raised);
+    background-image: var(--texture-linen);
+    background-size: var(--texture-linen-size);
+  }
+  .hm-back__head {
+    font-family: var(--ff-postal);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.36em;
+    text-align: center;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .hm-back__body {
+    display: grid;
+    flex: 1;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 0.9rem;
+    margin-top: 0.5rem;
+  }
+  .hm-back__msg {
+    padding-right: 0.9rem;
+    border-right: 1.5px solid var(--paper-shadow);
+  }
+  .hm-back__side {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.6rem;
+  }
+  .hm-back__stampbox {
+    display: grid;
+    place-items: center;
+    align-self: flex-end;
+    min-width: 3.4rem;
+    min-height: 4rem;
+    border: 1.5px dashed var(--paper-edge);
+  }
+  .hm-back__addr {
+    display: grid;
+    font-family: var(--ff-postal);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .hm-back__addr > * {
+    padding: 0.28rem 0;
+    border-bottom: 1px solid var(--paper-shadow);
+  }
+  .hm-hand {
+    font-family: var(--ff-hand), var(--ff-hand-fallback);
+    font-size: clamp(1.2rem, 1rem + 0.6vw, 1.45rem);
+    line-height: 1.12;
+    color: var(--ink-letter);
+  }
+
+  /* ── 3. The souvenir rack ──────────────────────────────────────────────── */
+  .hm-rack {
+    --perf: 8px;
+  }
+  .hm-rackcard {
+    width: 100%;
+    height: 100%;
+    padding: 7px;
+  }
+  .hm-rackcard__scene {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    overflow: hidden;
+    padding: 0.9rem 0.5rem 0.8rem;
+    border-radius: 8px;
+    background-color: var(--world);
+    background-image: var(--texture-linen-light), var(--texture-rays);
+    background-size:
+      var(--texture-linen-size),
+      100% 100%;
+    text-align: center;
+  }
+  .hm-rackcard__greet {
+    font-size: clamp(1.1rem, 0.9rem + 0.8vw, 1.45rem);
+    color: var(--accent-navy);
+  }
+  .hm-rackcard__name {
+    margin-top: 0.1rem;
+    font-family: var(--ff-display);
+    font-size: clamp(1.25rem, 0.9rem + 1.4vw, 1.9rem);
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--paper-raised);
+    -webkit-text-stroke: 1.5px var(--accent-navy);
+    paint-order: stroke fill;
+    text-shadow: 3px 3px 0 var(--accent-navy);
+  }
+  .hm-rackcard__stamp {
+    margin-top: auto;
+  }
+  .hm-count {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-top: 0.9rem;
+  }
+  .hm-count .od {
+    font-size: clamp(2.6rem, 2rem + 2vw, 3.6rem);
+    color: var(--accent-ochre);
+  }
+
+  /* ── 4. A sheet of occasion stamps ─────────────────────────────────────── */
+  .hm-sheet {
+    display: grid;
+    /* the narrowest phones (under 360px) get two columns, so the labels stay a readable 12px */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+    padding: 0.6rem;
+    border-radius: var(--r-soft);
+    background-color: var(--paper-deep);
+    background-image: var(--texture-linen);
+    background-size: var(--texture-linen-size);
+    box-shadow: var(--elev-card);
+    list-style: none;
+    rotate: -1deg;
+  }
+  @media (min-width: 22.5rem) {
+    .hm-sheet {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 39.99rem) {
+    .hm-sheet > li {
+      padding: 0.3rem;
+    }
+    .hm-ostamp {
+      --rp: 3px;
+    }
+    .hm-ostamp__field {
+      padding-inline: 0.2rem;
+    }
+  }
+  /* Tablets: the sheet spans the page, so two rows of six keep each stamp stamp-sized */
+  @media (min-width: 40rem) {
+    .hm-sheet {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 64rem) {
+    .hm-sheet {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+  .hm-sheet > li {
+    padding: 0.45rem;
+    border-right: 1.5px dotted var(--paper-edge);
+    border-bottom: 1.5px dotted var(--paper-edge);
+  }
+  .hm-ostamp-wrap {
+    display: block;
+    rotate: var(--r, 0deg);
+  }
+  .hm-ostamp {
+    --rp: 4px;
+    display: block;
+    padding: calc(2 * var(--rp));
+    background: var(--paper-raised);
+    -webkit-mask:
+      radial-gradient(var(--rp), #0000 98%, #000) round calc(-1.5 * var(--rp)) calc(-1.5 * var(--rp)) / calc(3 * var(--rp)) calc(3 * var(--rp)),
+      linear-gradient(#000 0 0) no-repeat 50% / calc(100% - 3 * var(--rp)) calc(100% - 3 * var(--rp));
+    mask:
+      radial-gradient(var(--rp), #0000 98%, #000) round calc(-1.5 * var(--rp)) calc(-1.5 * var(--rp)) / calc(3 * var(--rp)) calc(3 * var(--rp)),
+      linear-gradient(#000 0 0) no-repeat 50% / calc(100% - 3 * var(--rp)) calc(100% - 3 * var(--rp));
+  }
+  .hm-ostamp__field {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    aspect-ratio: 4 / 5;
+    padding: 0.55rem 0.35rem 0.5rem;
+    background-color: var(--tone);
+    background-image: var(--texture-linen-light);
+    background-size: var(--texture-linen-size);
+    color: var(--ink);
+    text-align: center;
+  }
+  .hm-ostamp__value {
+    position: absolute;
+    top: 0.3rem;
+    left: 0.4rem;
+    font-family: var(--ff-display);
+    font-size: 0.72rem;
+  }
+  .hm-ostamp__icon {
+    margin-top: 1.1rem;
+  }
+  .hm-ostamp__icon svg {
+    width: clamp(1.6rem, 1.3rem + 1vw, 2.2rem);
+    height: auto;
+  }
+  .hm-ostamp__label {
+    margin-top: auto;
+    font-family: var(--ff-postal);
+    font-size: clamp(0.75rem, 0.7rem + 0.15vw, 0.82rem);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  /* ── 5. Wish you were here ─────────────────────────────────────────────── */
+  .hm-wish {
+    --perf: 8px;
+    /* cream breathing room under the hero's perforated edge */
+    margin-top: clamp(2.5rem, 1.5rem + 4vw, 5rem);
+  }
+  /* the lede fills in word by word as it scrolls through (pitch.com pattern) */
+  .hm-wish__fill {
+    max-width: 44rem;
+    margin: 1.5rem auto 0;
+    font-family: var(--ff-display);
+    font-size: clamp(1.35rem, 0.95rem + 1.6vw, 2.35rem);
+    line-height: 1.12;
+    text-transform: uppercase;
+    color: var(--ink);
+    /* even lines: no "FOR YEARS." left alone on the last one */
+    text-wrap: balance;
+  }
+  .hm-wish__title {
+    --write-dur: 1700ms;
+    display: inline-block;
+    padding: 0.05em 0.2em 0.12em;
+    font-size: clamp(3.4rem, 1.4rem + 8.6vw, 9.5rem);
+    line-height: 1;
+    color: var(--accent-navy);
+  }
+  .hm-stickers {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem 1.25rem;
+    margin: 2.5rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .hm-stk {
+    display: grid;
+    place-items: center;
+    padding: 0.6rem 1rem;
+    border: 2.5px solid var(--accent-navy);
+    box-shadow: 3px 3px 0 var(--accent-navy);
+    font-family: var(--ff-display);
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    line-height: 1.1;
+    text-align: center;
+    text-transform: uppercase;
+    rotate: var(--r, 0deg);
+  }
+  .hm-stk--circle {
+    width: 6.75rem;
+    aspect-ratio: 1;
+    padding: 0.7rem;
+    border-radius: 50%;
+    background: var(--accent-navy);
+    color: var(--paper-raised);
+    outline: 1.5px dashed var(--paper-raised);
+    outline-offset: -8px;
+  }
+  .hm-stk--paper {
+    background: var(--paper-raised);
+    color: var(--accent-navy);
+    outline-color: var(--accent-navy);
+  }
+  .hm-stk--oval {
+    width: 8.5rem;
+    aspect-ratio: 8 / 5;
+    border-radius: 50%;
+    background: var(--paper-raised);
+    color: var(--accent-red-ink);
+  }
+  .hm-stk--label {
+    min-height: 4.5rem;
+    border-radius: 12px;
+    background: var(--accent-ochre);
+    color: var(--ink);
+    outline: 1.5px dashed var(--ink);
+    outline-offset: -6px;
+  }
+  .hm-stk--pennant {
+    min-height: 3.25rem;
+    padding-inline: 1.4rem;
+    border-radius: var(--r-pill);
+    background: var(--accent-rose);
+    color: var(--ink);
+  }
+
+  .hm-phone {
+    aspect-ratio: 9 / 18.5;
+    padding: 0.4rem;
+    border-radius: 1.6rem;
+    background: var(--ink);
+    box-shadow: var(--elev-lifted);
+  }
+  .hm-phone__screen {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    height: 100%;
+    overflow: hidden;
+    padding: 1rem 0.6rem;
+    border-radius: 1.25rem;
+    background-image: var(--texture-linen-light), var(--grad-sea);
+    background-size:
+      var(--texture-linen-size),
+      100% 100%;
+    text-align: center;
+  }
+  .hm-phone__notch {
+    position: absolute;
+    top: 0.4rem;
+    left: 50%;
+    width: 34%;
+    height: 0.8rem;
+    translate: -50% 0;
+    border-radius: 999px;
+    background: var(--ink);
+  }
+  .hm-phone__prompt {
+    font-family: var(--ff-script);
+    font-size: clamp(0.95rem, 0.8rem + 0.5vw, 1.2rem);
+    line-height: 1.05;
+    color: var(--paper);
+  }
+  .hm-phone__env {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    border-radius: 3px;
+    background: var(--paper-raised);
+  }
+  .hm-phone__env > svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .hm-phone__seal {
+    position: absolute;
+    top: 58%;
+    left: 50%;
+    translate: -50% -50%;
+    animation: hm-beat 2.6s var(--motion-ease-in-out) infinite;
+  }
+  @keyframes hm-beat {
+    0%,
+    100% {
+      scale: 1;
+    }
+    12% {
+      scale: 1.1;
+    }
+    24% {
+      scale: 1;
+    }
+  }
+  .hm-phone__tap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: var(--r-pill);
+    background: var(--paper-raised);
+    color: var(--ink);
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  .hm-num {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    border: var(--line-w) solid var(--accent-navy);
+    border-radius: 50%;
+    color: var(--accent-navy);
+    font-family: var(--ff-display);
+    font-size: 0.9rem;
+  }
+
+  /* ── 6–7. What fits → the first tap (pinned, after later.com, D-071) ────
+   * Each layer reads its own 0 → 1 variable, written by scroll: --s the stats lifting away,
+   * --c the colour field collapsing into the frame, --m the photograph, --ph the phone,
+   * --x the words rising, --r each line after them. */
+  .hm-hype {
+    position: relative;
+    height: 330svh;
+  }
+  .hm-hype__stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
+  }
+  .hm-hype__panel {
+    position: absolute;
+    inset: 0;
+    clip-path: inset(calc(var(--c, 0) * 13%) calc(var(--c, 0) * 4.5%) calc(var(--c, 0) * 13%) calc(var(--c, 0) * 51%) round calc(var(--c, 0) * 28px));
+  }
+  .hm-hype__media {
+    position: absolute;
+    inset: 13% 4.5% 13% 51%;
+    overflow: hidden;
+    opacity: var(--m, 0);
+    transform: scale(calc(1.12 - var(--m, 0) * 0.12));
+  }
+  .hm-hype__media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .hm-hype__cap {
+    position: absolute;
+    right: 1rem;
+    bottom: 1rem;
+    max-width: calc(100% - 2rem);
+    padding: 0.35rem 0.75rem 0.3rem;
+    border-radius: 6px;
+    background: var(--paper-raised);
+    box-shadow: var(--elev-card);
+    font-family: var(--ff-hand), var(--ff-hand-fallback);
+    font-size: clamp(1.05rem, 0.9rem + 0.5vw, 1.4rem);
+    line-height: 1.1;
+    color: var(--ink-letter);
+    rotate: -1.5deg;
+  }
+  .hm-hype__stats {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding-top: var(--head-h, 4.75rem);
+    opacity: calc(1 - var(--s, 0));
+    transform: translateY(calc(var(--s, 0) * -9vh)) scale(calc(1 - var(--s, 0) * 0.06));
+  }
+  .hm-hype__statsin {
+    text-align: center;
+  }
+  .hm-hype__title {
+    margin-top: 0.75rem;
+    font-size: clamp(2.1rem, 1.2rem + 3.6vw, 4.6rem);
+    line-height: 0.96;
+  }
+  .hm-hype :where(.display) :where(em) {
+    color: var(--accent-navy);
+  }
+  .hm-hype__cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(0.75rem, 1.6vw, 1.5rem);
+    margin: clamp(1.25rem, 4svh, 3rem) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 60rem) {
+    .hm-hype__cards {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+  /* later.com's chunky cards, on a hard navy shadow */
+  .hm-stat {
+    display: grid;
+    align-content: start;
+    justify-items: start;
+    gap: 0.15rem;
+    min-height: clamp(8.5rem, 22svh, 13.5rem);
+    padding: clamp(0.85rem, 0.5rem + 1.2vw, 1.5rem);
+    border: var(--line-w) solid var(--ink);
+    border-radius: 18px;
+    background: var(--paper-raised);
+    box-shadow: 7px 7px 0 var(--accent-navy);
+    text-align: left;
+  }
+  .hm-stat__icon {
+    display: grid;
+    place-items: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    margin-bottom: auto;
+    border: var(--line-w) solid var(--accent-navy);
+    border-radius: 50%;
+    color: var(--accent-navy);
+  }
+  .hm-stat__icon svg {
+    width: 58%;
+  }
+  .hm-stat__n {
+    margin-top: clamp(0.5rem, 2svh, 1.25rem);
+    font-family: var(--ff-display);
+    font-size: clamp(2.3rem, 1.5rem + 2.6vw, 4.2rem);
+    line-height: 0.9;
+    color: var(--accent-red);
+  }
+  .hm-stat__unit {
+    font-family: var(--ff-display);
+    font-size: clamp(0.95rem, 0.8rem + 0.5vw, 1.25rem);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .hm-stat__label {
+    margin-top: 0.2rem;
+    font-size: clamp(0.8rem, 0.72rem + 0.3vw, 0.95rem);
+    line-height: 1.35;
+    color: var(--ink-soft);
+  }
+  .hm-hype__phone {
+    position: absolute;
+    bottom: 6%;
+    left: calc(51% - clamp(3rem, 5vw, 5.5rem));
+    z-index: 3;
+    width: clamp(7rem, 4rem + 7vw, 11rem);
+    opacity: var(--ph, 0);
+    transform: translateY(calc((1 - var(--ph, 0)) * 45%)) rotate(-6deg);
+  }
+  .hm-hype__copy {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    padding-top: var(--head-h, 4.75rem);
+    opacity: var(--x, 0);
+    transform: translateY(calc((1 - var(--x, 0)) * 70px));
+    pointer-events: none;
+  }
+  .hm-hype__copy > .wrap {
+    width: 100%;
+  }
+  .hm-hype__copyin {
+    width: min(44%, 34rem);
+    pointer-events: auto;
+  }
+  .hm-hype__tapTitle {
+    margin-top: 0.75rem;
+    font-size: clamp(2rem, 1.3rem + 2.6vw, 3.6rem);
+    line-height: 0.98;
+  }
+  .hm-hype__lede {
+    margin-top: 1rem;
+    font-size: var(--fs-lede);
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .hm-hype__ritual {
+    display: grid;
+    gap: 0.7rem;
+    margin: 1.5rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .hm-hype__ritual li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    font-weight: 500;
+    opacity: var(--r, 1);
+    transform: translateY(calc((1 - var(--r, 1)) * 16px));
+  }
+  .hm-hype__ritual li > span:last-child {
+    padding-top: 0.3rem;
+  }
+  .hm-hype__cta {
+    margin-top: 1.75rem;
+    opacity: var(--r, 1);
+    transform: translateY(calc((1 - var(--r, 1)) * 12px));
+  }
+  /* phones and tablets: the colour field folds into the lower half; the words take the top,
+   * full width (centred in a 44% column they ran down over the photograph on a tablet) */
+  @media (max-width: 59.99rem) {
+    .hm-hype {
+      height: 300svh;
+    }
+    .hm-hype__copy {
+      align-items: flex-start;
+      padding-top: calc(var(--head-h, 4rem) + clamp(0.75rem, 3svh, 2rem));
+    }
+    .hm-hype__copyin {
+      width: min(100%, 40rem);
+    }
+    .hm-hype__lede {
+      display: none;
+    }
+    .hm-hype__panel {
+      clip-path: inset(calc(var(--c, 0) * 57%) calc(var(--c, 0) * 4%) calc(var(--c, 0) * 3%) calc(var(--c, 0) * 4%) round calc(var(--c, 0) * 22px));
+    }
+    .hm-hype__media {
+      inset: 57% 4% 3% 4%;
+    }
+    .hm-hype__cap {
+      top: 0.75rem;
+      right: auto;
+      bottom: auto;
+      left: 0.75rem;
+    }
+  }
+  @media (max-width: 39.99rem) {
+    .hm-hype__phone:not(.hm-hype__phone--static) {
+      display: none;
+    }
+    .hm-hype__phone {
+      right: 7%;
+      bottom: 5%;
+      left: auto;
+      width: clamp(5.5rem, 3rem + 10vw, 8rem);
+    }
+    .hm-hype__ritual {
+      gap: 0.45rem;
+      margin-top: 1rem;
+      font-size: 0.95rem;
+    }
+    .hm-hype__cta {
+      margin-top: 1rem;
+    }
+  }
+  /* Short phones: in the first-tap scene the three steps would run into the photograph (the
+   * title and the link stay; the help page has the steps), and in the year scene the extra
+   * lines would squeeze the envelope to an icon. */
+  @media (max-width: 59.99rem) and (max-height: 42rem) {
+    .hm-hype .hm-hype__ritual,
+    .hm-yr__added,
+    .hm-yr__tally {
+      display: none;
+    }
+    /* and the four stats become compact cards, so all of them fit the screen */
+    .hm-hype__title {
+      font-size: clamp(1.8rem, 1.2rem + 3.6vw, 2.4rem);
+    }
+    .hm-stat {
+      min-height: 0;
+      padding: 0.7rem 0.8rem;
+    }
+    .hm-stat__icon {
+      display: none;
+    }
+    .hm-stat__n {
+      margin-top: 0;
+      font-size: 2rem;
+    }
+  }
+  /* reduced motion: two ordinary sections */
+  .hm-hype--static {
+    height: auto;
+    padding-block: var(--section-y);
+  }
+  .hm-hype__photo-static img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+  .hm-hype__phone--static {
+    right: -0.5rem;
+    bottom: -1.5rem;
+    left: auto;
+    opacity: 1;
+    transform: rotate(-6deg);
+  }
+
+  /* ── 8. A year in one envelope (pinned scroll story, D-067) ────────────── */
+  .hm-yr {
+    position: relative;
+    height: 420svh;
+  }
+  .hm-yr[data-static] {
+    height: auto;
+  }
+  .hm-yr__stage {
+    --perf: 8px;
+    position: sticky;
+    top: 0;
+    isolation: isolate;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    height: 100svh;
+    overflow: hidden;
+    -webkit-mask:
+      radial-gradient(circle at 50% 0, transparent var(--perf), #000 calc(var(--perf) + 0.5px)) top / calc(var(--perf) * 3) 51% repeat-x,
+      radial-gradient(circle at 50% 100%, transparent var(--perf), #000 calc(var(--perf) + 0.5px)) bottom / calc(var(--perf) * 3) 51% repeat-x;
+    mask:
+      radial-gradient(circle at 50% 0, transparent var(--perf), #000 calc(var(--perf) + 0.5px)) top / calc(var(--perf) * 3) 51% repeat-x,
+      radial-gradient(circle at 50% 100%, transparent var(--perf), #000 calc(var(--perf) + 0.5px)) bottom / calc(var(--perf) * 3) 51% repeat-x;
+  }
+  .hm-yr[data-static] .hm-yr__stage {
+    position: relative;
+    height: auto;
+    padding-block: 2rem;
+  }
+  .hm-yr__season {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+  }
+  .hm-yr__stage::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: var(--texture-linen-light), var(--texture-rays);
+    background-size:
+      var(--texture-linen-size),
+      100% 100%;
+    pointer-events: none;
+  }
+  .hm-yr__grid {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.5rem;
+    min-height: 0;
+    padding-top: calc(var(--head-h, 4.75rem) + clamp(0.75rem, 2svh, 2rem));
+  }
+  @media (min-width: 60rem) {
+    .hm-yr__grid {
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      grid-template-rows: none;
+      align-items: center;
+      gap: 3rem;
+    }
+  }
+  /* The stage is one screen tall, so the copy is sized by height as well as width (min of the
+   * two): a wide but short laptop screen gets smaller type rather than an overflowing column. */
+  .hm-yr__title {
+    margin-top: 0.5rem;
+    font-size: clamp(1.6rem, min(1.2rem + 2.4vw, 0.9rem + 3.6svh), 3.4rem);
+    line-height: 0.98;
+  }
+  .hm-yr__now {
+    display: grid;
+    margin-top: clamp(0.75rem, 2.5svh, 1.75rem);
+  }
+  .hm-yr__date {
+    font-family: var(--ff-display);
+    font-size: clamp(2.6rem, min(1.6rem + 6vw, 0.4rem + 9svh), 7.25rem);
+    line-height: 0.82;
+    text-transform: uppercase;
+    color: var(--accent-navy);
+  }
+  .hm-yr__date span {
+    margin-left: 0.18em;
+    font-size: 0.34em;
+    vertical-align: 0.15em;
+    color: var(--ink);
+  }
+  .hm-yr__moment {
+    margin-top: 0.35rem;
+    font-size: clamp(1.5rem, min(1.2rem + 1.6vw, 0.8rem + 2.8svh), 2.6rem);
+    color: var(--accent-red);
+  }
+  .hm-yr__added {
+    margin-top: 0.15rem;
+    font-family: var(--ff-hand), var(--ff-hand-fallback);
+    font-size: clamp(1.2rem, 1rem + 0.6vw, 1.55rem);
+    line-height: 1.15;
+    color: var(--ink-letter);
+  }
+  /* each chapter's words arrive with a short blurred crossfade (discrete change, ease-out) */
+  .hm-yr-swap {
+    animation: hm-yr-in 340ms var(--ease-out-strong) both;
+  }
+  @keyframes hm-yr-in {
+    from {
+      opacity: 0;
+      filter: blur(4px);
+      transform: translateY(10px);
+    }
+  }
+  .hm-yr__tally {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: clamp(0.75rem, 2svh, 1.4rem);
+  }
+  /* parcel tags: square-cornered, with a punched, reinforced hole at the tied end */
+  .hm-yr__tally > span {
+    --hole: color-mix(in srgb, var(--ink) 35%, transparent);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    padding: 0.32em 0.8em 0.26em 1.45em;
+    border: 1.5px dashed color-mix(in srgb, var(--ink) 45%, transparent);
+    border-radius: 2px;
+    background: radial-gradient(circle at 0.62em 50%, transparent 0.17em, var(--hole) 0.19em 0.29em, transparent 0.31em);
+    font-family: var(--ff-postal);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--ink) 55%, transparent);
+    transition:
+      background-color var(--dur-ui) ease,
+      color var(--dur-ui) ease,
+      border-color var(--dur-ui) ease;
+  }
+  .hm-yr__tally > span:first-child,
+  .hm-yr__tally > span[data-on] {
+    --hole: var(--accent-ochre);
+    border-style: solid;
+    border-color: var(--ink);
+    background:
+      radial-gradient(circle at 0.62em 50%, transparent 0.17em, var(--hole) 0.19em 0.29em, var(--paper-raised) 0.31em);
+    color: var(--ink);
+  }
+  .hm-yr__tally b {
+    font-family: var(--ff-display);
+    font-size: 1.15em;
+    font-weight: 400;
+  }
+  .hm-yr__note {
+    display: none;
+    max-width: 26rem;
+    margin-top: 1.25rem;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+  }
+  @media (min-width: 60rem) and (min-height: 50rem) {
+    .hm-yr__note {
+      display: block;
+    }
+  }
+
+  /* the envelope on the desk, open, the year rising out of it */
+  /* The desk is a size container: the envelope and the cards rising out of it are sized from the
+   * room the desk really has (cqw and cqh), so the fan never grows past the header, whatever the
+   * screen's shape. */
+  .hm-yr__desk {
+    container-type: size;
+    display: grid;
+    place-items: center;
+    min-height: 0;
+    padding-bottom: clamp(0.5rem, 2svh, 1.5rem);
+  }
+  /* not pinned (reduced motion): the desk sizes to its content, so only its width is contained
+   * (cqh then falls back to the viewport height) */
+  .hm-yr[data-static] .hm-yr__desk {
+    container-type: inline-size;
+  }
+  @media (min-width: 60rem) {
+    .hm-yr__desk {
+      align-self: stretch;
+    }
+  }
+  .hm-yr__env {
+    /* The envelope's width: as wide as the desk allows, and short enough that the whole fan fits
+     * the desk's height. With every card risen, envelope + fan stand --fan-k envelope-widths tall
+     * (measured: 1.02 to 1.04 across screen sizes; 1rem spare for the cards' turn and shadows). */
+    --fan-k: 1.04;
+    --ew: min(40rem, 92cqw, calc((100cqh - 1rem) / var(--fan-k)));
+    --cw: calc(var(--ew) * 0.28);
+    position: relative;
+    width: var(--ew);
+    aspect-ratio: 600 / 380;
+    /* room above for the fan, so centring the envelope centres the whole group (0.633 = 380/600) */
+    margin-top: calc(var(--ew) * (var(--fan-k) - 0.633));
+  }
+  .hm-yr__flap {
+    position: absolute;
+    right: 0;
+    bottom: 100%;
+    left: 0;
+    height: 44%;
+    background-color: var(--accent-dusty-blue);
+    background-image: var(--texture-linen-light);
+    background-size: var(--texture-linen-size);
+    clip-path: polygon(0 100%, 50% 0, 100% 100%);
+  }
+  .hm-yr__back {
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    background-color: #e9dcc5;
+    background-image: var(--texture-fibre), var(--texture-grain);
+    background-size:
+      400px 400px,
+      var(--texture-grain-size);
+    box-shadow: var(--elev-envelope);
+  }
+  .hm-yr__fan {
+    position: absolute;
+    bottom: 26%;
+    left: 50%;
+    z-index: 1;
+    width: 0;
+    height: 0;
+  }
+  /* --t (0 → 1) is the card's own scroll progress; --a its resting angle in the fan */
+  .hm-yr__card {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: var(--cw);
+    margin-left: calc(var(--cw) / -2);
+    transform-origin: 50% 175%;
+    transform: translateY(calc(40% - var(--t, 1) * (122% + var(--lift, 0%)))) rotate(calc(var(--t, 1) * var(--a, 0deg)));
+    opacity: calc(var(--t, 1) * 5);
+  }
+  .hm-yr__card[data-last] {
+    --lift: 18%;
+    width: calc(var(--cw) * 1.12);
+    margin-left: calc(var(--cw) * -0.56);
+  }
+  .hm-yr__photo,
+  .hm-yr__letter,
+  .hm-yr__voice,
+  .hm-yr__song {
+    margin: 0;
+    border-radius: 9px;
+    box-shadow: var(--elev-card);
+  }
+  .hm-yr__photo {
+    padding: 6px 6px 0;
+    background: var(--paper-raised);
+  }
+  .hm-yr__photo img {
+    background: var(--paper-deep);
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+    border-radius: 5px;
+    object-fit: cover;
+  }
+  .hm-yr__photo figcaption {
+    overflow: hidden;
+    padding: 0.25rem 0.15rem 0.45rem;
+    font-family: var(--ff-hand), var(--ff-hand-fallback);
+    font-size: calc(var(--cw) * 0.105);
+    line-height: 1.1;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--ink-letter);
+  }
+  .hm-yr__letter {
+    display: grid;
+    align-content: start;
+    gap: 0.2em;
+    aspect-ratio: 4 / 5.6;
+    padding: 0.8em 0.75em;
+    background-color: var(--paper-raised);
+    background-image: repeating-linear-gradient(180deg, transparent 0 1.15em, var(--paper-rule, #e6dccb) 1.15em calc(1.15em + 1px));
+    background-position: 0 0.8em;
+    font-family: var(--ff-hand), var(--ff-hand-fallback);
+    font-size: calc(var(--cw) * 0.11);
+    line-height: 1.15;
+    color: var(--ink-letter);
+  }
+  .hm-yr__voice,
+  .hm-yr__song {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 0.35em;
+    aspect-ratio: 4 / 5.6;
+    padding: 0.8em;
+    background-image: var(--texture-linen-light), var(--texture-rays);
+    background-size:
+      var(--texture-linen-size),
+      100% 100%;
+    border: 5px solid var(--paper-raised);
+    font-size: calc(var(--cw) * 0.1);
+    text-align: center;
+    color: var(--ink);
+  }
+  .hm-yr__voice {
+    background-color: var(--accent-sage);
+  }
+  .hm-yr__song {
+    background-color: var(--accent-ochre);
+  }
+  .hm-yr__voice b,
+  .hm-yr__song b {
+    font-family: var(--ff-display);
+    font-size: 1.35em;
+    font-weight: 400;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .hm-yr__voice span,
+  .hm-yr__song span:not(.hm-yr__vinyl) {
+    font-family: var(--ff-postal);
+    font-size: 0.85em;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .hm-yr__bars {
+    display: flex;
+    align-items: center;
+    gap: 3%;
+    width: 80%;
+    height: 2.6em;
+  }
+  .hm-yr__bars i {
+    flex: 1;
+    height: calc(var(--h) * 100%);
+    border-radius: 2px;
+    background: var(--accent-sage-ink);
+  }
+  .hm-yr__vinyl {
+    width: 62%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle, var(--accent-red) 0 17%, #1d1712 18% 21%, transparent 22%),
+      repeating-radial-gradient(circle, #1d1712 0 2px, #2c241d 2px 4px);
+  }
+  .hm-yr__front {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 -2px 3px rgb(47 35 27 / 0.12));
+  }
+  .hm-yr__seal {
+    position: absolute;
+    top: 51.5%;
+    left: 50%;
+    z-index: 3;
+    translate: -50% -50%;
+  }
+  /* the seal, the address and the stamp scale with the envelope, not the screen */
+  .hm-yr__seal .sd-seal {
+    width: calc(var(--ew) * 0.11) !important;
+    height: auto !important;
+  }
+  .hm-yr__to {
+    position: absolute;
+    bottom: 11%;
+    left: 7%;
+    z-index: 3;
+    font-family: var(--ff-hand), var(--ff-hand-fallback);
+    font-size: calc(var(--ew) * 0.05);
+    color: var(--ink-letter);
+  }
+  .hm-yr__stamp {
+    position: absolute;
+    right: 5%;
+    bottom: 9%;
+    z-index: 3;
+    width: calc(var(--ew) * 0.1);
+  }
+  .hm-yr__stamp > * {
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  /* the year as an airmail route: a flight lane on top (the route, a stop per month, the biplane),
+   * then a stamp hanging from each stop on a dotted thread. The lane is also the breathing room
+   * between the envelope and the stamps. */
+  .hm-yr__rail {
+    --stamp: clamp(2.9rem, min(2rem + 3.6vw, 9svh), 5.4rem);
+    --lane: clamp(2.75rem, min(2.5rem + 2vw, 6.5svh), 4.5rem);
+    position: relative;
+    margin-top: clamp(0.25rem, 1.5svh, 1rem);
+    padding-top: var(--lane);
+    padding-bottom: clamp(1rem, 3svh, 2rem);
+  }
+  /* the route runs from the first stop (above the first stamp's centre) to the last */
+  .hm-yr__route {
+    position: absolute;
+    top: calc(var(--lane) * 0.42);
+    right: calc(var(--gutter) + (100% - 2 * var(--gutter)) / 10);
+    left: calc(var(--gutter) + (100% - 2 * var(--gutter)) / 10);
+    height: 3px;
+    translate: 0 -50%;
+    /* still to fly: a dotted line */
+    background-image: radial-gradient(circle, color-mix(in srgb, var(--ink) 40%, transparent) 1.2px, transparent 1.6px);
+    background-size: 9px 3px;
+    background-position: 0 50%;
+  }
+  /* flown: a navy line, drawn up to the plane */
+  .hm-yr__fill {
+    position: absolute;
+    inset: 0;
+    border-radius: 2px;
+    background: var(--accent-navy);
+    transform-origin: 0 50%;
+  }
+  /* a stop per month: an open ring until it's reached, then a navy dot ringed in cream */
+  .hm-yr__pin {
+    position: absolute;
+    top: 50%;
+    width: 0.8rem;
+    height: 0.8rem;
+    translate: -50% -50%;
+    border: 2px solid color-mix(in srgb, var(--ink) 40%, transparent);
+    border-radius: 50%;
+    background: var(--paper-raised);
+    transition:
+      background-color var(--dur-ui) ease,
+      border-color var(--dur-ui) ease,
+      scale 320ms var(--ease-settle);
+  }
+  .hm-yr__pin[data-on] {
+    border-color: var(--paper-raised);
+    background: var(--accent-navy);
+    scale: 1.15;
+  }
+  .hm-yr__flight {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+  }
+  /* the biplane sits on the route, nose to the right (the year runs left to right) */
+  .hm-yr__plane {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    translate: -50% -56%;
+    filter: drop-shadow(0 4px 3px rgb(19 30 36 / 0.22));
+  }
+  .hm-yr__craft {
+    display: block;
+    width: clamp(4rem, 3.1rem + 2.6vw, 6.25rem);
+    scale: -1 1;
+    animation: hm-bob 3.2s var(--motion-ease-in-out) infinite alternate;
+  }
+
+  .hm-yr__stops {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .hm-yr__stops li {
+    display: grid;
+    justify-items: center;
+    gap: 0.35rem;
+  }
+  .hm-yr__tick {
+    position: relative;
+    width: var(--stamp);
+    transform-origin: 50% 0;
+    /* months still to come: waiting, greyed */
+    filter: grayscale(1) drop-shadow(0 2px 3px rgb(47 35 27 / 0.15));
+    opacity: 0.6;
+    scale: 0.9;
+    transition:
+      filter var(--dur-ui) ease,
+      opacity var(--dur-ui) ease,
+      scale 420ms var(--ease-settle),
+      translate 420ms var(--ease-settle),
+      rotate 420ms var(--ease-settle);
+  }
+  .hm-yr__stops li[data-on] .hm-yr__tick {
+    filter: grayscale(0) drop-shadow(0 3px 4px rgb(47 35 27 / 0.22));
+    opacity: 1;
+    scale: 1;
+  }
+  .hm-yr__stops li[data-now] .hm-yr__tick {
+    filter: grayscale(0) drop-shadow(0 10px 12px rgb(47 35 27 / 0.3));
+    scale: 1.1;
+    translate: 0 -6px;
+    rotate: -4deg;
+  }
+  /* the thread from the stop down to the stamp (it stays put while the stamp lifts and turns) */
+  .hm-yr__stops li {
+    position: relative;
+  }
+  .hm-yr__stops li::before {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    height: calc(var(--lane) * 0.58 - 0.4rem);
+    border-left: 1.5px dashed color-mix(in srgb, var(--ink) 35%, transparent);
+    translate: -50% 0;
+    transition: border-color var(--dur-ui) ease;
+  }
+  .hm-yr__stops li[data-on]::before {
+    border-left-style: solid;
+    border-color: var(--accent-navy);
+  }
+  .hm-yr__stampface {
+    --rp: 3px;
+    display: grid;
+    gap: 3px;
+    padding: 6px 6px 4px;
+    background: var(--paper-raised);
+  }
+  .hm-yr__thumb {
+    position: relative;
+    display: block;
+    background: var(--paper-deep);
+    aspect-ratio: 1;
+    overflow: hidden;
+  }
+  .hm-yr__thumb img {
+    object-fit: cover;
+  }
+  .hm-yr__mo {
+    font-family: var(--ff-display);
+    font-size: calc(var(--stamp) * 0.17);
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+    color: var(--accent-navy);
+  }
+  /* the cancel lands once a month is reached (a rubber stamp: big and turned, then pressed) */
+  .hm-yr__cancel {
+    position: absolute;
+    top: 8%;
+    right: -38%;
+    width: 92%;
+    color: var(--accent-navy);
+    opacity: 0;
+    transform: scale(1.4) rotate(-16deg);
+    transition:
+      opacity 120ms ease,
+      transform 320ms var(--ease-out-strong);
+    pointer-events: none;
+    mix-blend-mode: multiply;
+  }
+  .hm-yr__stops li[data-on] .hm-yr__cancel {
+    opacity: 0.75;
+    transform: rotate(-8deg);
+  }
+  .hm-yr__stops small {
+    font-family: var(--ff-postal);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: color-mix(in srgb, var(--ink) 55%, transparent);
+    transition: color var(--dur-ui) ease;
+  }
+  .hm-yr__stops li[data-on] small {
+    color: var(--ink);
+  }
+
+  /* ── 9. Good to know: a bento of postcard scenes (D-072) ───────────────── */
+  .kn-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+  }
+  .kn-grid {
+    display: grid;
+    gap: clamp(1rem, 2vw, 1.75rem);
+    margin: clamp(2rem, 5vw, 3.25rem) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 48rem) {
+    .kn-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .kn-cell--big,
+    .kn-cell--wide {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (min-width: 64rem) {
+    .kn-grid {
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      grid-template-rows: auto auto auto;
+    }
+    .kn-cell--big {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+    }
+    .kn-cell--wide {
+      grid-column: 1 / -1;
+    }
+  }
+  .kn-cell {
+    display: flex;
+    min-width: 0;
+  }
+  /* a postcard: white border, rounded corners, resting on the desk */
+  .kn-card {
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-height: clamp(15rem, 12rem + 10vw, 19rem);
+    padding: var(--border-card);
+    border-radius: var(--r-card);
+    background: var(--paper-raised);
+    box-shadow: var(--elev-card);
+    color: var(--ink);
+    text-decoration: none;
+    transition:
+      translate 280ms var(--ease-out-strong),
+      rotate 280ms var(--ease-out-strong),
+      box-shadow 280ms var(--ease-out-strong),
+      scale var(--dur-press) var(--ease-out-strong);
+  }
+  .kn-cell--big .kn-card {
+    min-height: clamp(22rem, 16rem + 18vw, 36rem);
+  }
+  /* hit slop: the card rises 6px on hover; this keeps the spot it rose from inside the link, so
+   * a pointer at its bottom edge doesn't fall off it and flicker */
+  .kn-card::after {
+    content: "";
+    position: absolute;
+    inset: -3px -3px -9px;
+  }
+  .kn-card:active {
+    scale: 0.985;
+  }
+  .kn-scene {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+    padding: clamp(1.1rem, 0.7rem + 1.5vw, 1.9rem);
+    border-radius: calc(var(--r-card) - 6px);
+  }
+  .kn-art {
+    position: relative;
+    display: grid;
+    flex: 1 1 0;
+    place-items: center;
+    min-height: 7.5rem;
+    margin-bottom: 1rem;
+    transition: transform 320ms var(--ease-out-strong);
+  }
+  .kn-art > * {
+    max-height: 100%;
+  }
+  .kn-art__tap {
+    width: auto;
+    max-width: min(100%, 30rem);
+    height: 100%;
+  }
+  .kn-art__route {
+    width: auto;
+    max-width: 100%;
+    height: 100%;
+  }
+  .kn-art__seal {
+    filter: drop-shadow(0 18px 18px rgb(8 30 36 / 0.35));
+  }
+  /* the art drifts with scroll where CSS scroll timelines exist (off the main thread) */
+  @supports (animation-timeline: view()) {
+    .kn-art {
+      animation: kn-drift linear both;
+      animation-timeline: view();
+      animation-range: entry 0% exit 100%;
+    }
+  }
+  @keyframes kn-drift {
+    from {
+      translate: 0 18px;
+    }
+    to {
+      translate: 0 -18px;
+    }
+  }
+  .kn-text {
+    position: relative;
+    display: grid;
+    gap: 0.5rem;
+    max-width: 28rem;
+    padding-right: 3.5rem;
+  }
+  .kn-title {
+    font-size: clamp(1.55rem, 1.1rem + 1.4vw, 2.3rem);
+    line-height: 1;
+  }
+  .kn-cell--big .kn-title {
+    font-size: clamp(1.9rem, 1.2rem + 2.4vw, 3.4rem);
+  }
+  .kn-body {
+    font-size: clamp(0.95rem, 0.88rem + 0.3vw, 1.1rem);
+    font-weight: 500;
+    line-height: 1.45;
+  }
+  .kn-scene.band-sea .kn-body {
+    color: color-mix(in srgb, var(--paper) 90%, transparent);
+  }
+  .kn-scene.band-sky :where(.display) :where(em) {
+    color: var(--accent-navy);
+  }
+  .kn-go {
+    position: absolute;
+    right: clamp(1rem, 0.6rem + 1.4vw, 1.6rem);
+    bottom: clamp(1rem, 0.6rem + 1.4vw, 1.6rem);
+    display: grid;
+    place-items: center;
+    width: 2.9rem;
+    height: 2.9rem;
+    border: var(--line-w) solid currentColor;
+    border-radius: 50%;
+    transition:
+      background-color var(--dur-ui) ease,
+      color var(--dur-ui) ease,
+      translate var(--dur-ui) var(--ease-out-strong);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .kn-card:hover {
+      translate: 0 -6px;
+      rotate: -0.6deg;
+      box-shadow:
+        0 2px 2px rgb(47 35 27 / 0.12),
+        0 24px 30px -14px rgb(47 35 27 / 0.4);
+    }
+    .kn-card:hover .kn-art {
+      transform: scale(1.05) rotate(-1.5deg);
+    }
+    .kn-card:hover .kn-go {
+      background: var(--accent-navy);
+      color: var(--paper-raised);
+      border-color: var(--accent-navy);
+      translate: 3px 0;
+    }
+  }
+
+  /* the postcard back of quick answers */
+  .kn-back {
+    position: relative;
+    flex: 1;
+    padding: clamp(1.25rem, 0.8rem + 2vw, 2.5rem);
+    border-radius: var(--r-card);
+    background-color: var(--paper-raised);
+    background-image: var(--texture-linen);
+    background-size: var(--texture-linen-size);
+    box-shadow: var(--elev-card);
+  }
+  .kn-back__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  /* the stamp box sits in the card's top-right corner, so it doesn't push the answers down */
+  .kn-back__stamp {
+    position: absolute;
+    top: clamp(0.75rem, 0.5rem + 1vw, 1.5rem);
+    right: clamp(0.75rem, 0.5rem + 1vw, 1.5rem);
+    padding: 0.35rem;
+    border: 1.5px dashed var(--paper-edge);
+    border-radius: 4px;
+  }
+  .kn-back__head {
+    padding-right: 4.5rem;
+  }
+  .kn-answers {
+    display: grid;
+    gap: 0;
+    margin-top: 0.5rem;
+  }
+  @media (min-width: 48rem) {
+    .kn-answers {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: clamp(2rem, 5vw, 4rem);
+    }
+  }
+  .kn-answers > div {
+    padding: 1.1rem 0 1.15rem;
+    border-bottom: 1.5px dashed var(--paper-edge);
+  }
+  .kn-answers dt {
+    font-size: clamp(1rem, 0.9rem + 0.4vw, 1.2rem);
+    line-height: 1.1;
+  }
+  .kn-answers dd {
+    margin-top: 0.4rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .kn-back__foot {
+    margin-top: 1.25rem;
+    color: var(--ink-soft);
+  }
+
+  /* ── Still states ──────────────────────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    html:not([data-motion="full"]) :is(.hm-plane__bob, .hm-plane__craft, .hm-plane__prop, .hm-plane__scarf, .hm-plane__tow, .hm-plane__banner, .hm-phone__seal, .kn-art, .hm-hero__peek, .hm-hero__sun, .hm-yr-swap, .hm-yr__craft) {
+      animation: none !important;
+    }
+    html:not([data-motion="full"]) .hm-plane__bob {
+      transform: translateX(52vw);
+    }
+  }
+  html[data-motion="reduce"] :is(.hm-plane__bob, .hm-plane__craft, .hm-plane__prop, .hm-plane__scarf, .hm-plane__tow, .hm-plane__banner, .hm-phone__seal, .kn-art, .hm-hero__peek, .hm-hero__sun, .hm-yr-swap, .hm-yr__craft) {
+    animation: none !important;
+  }
+  html[data-motion="reduce"] .hm-plane__bob {
+    transform: translateX(52vw);
+  }
+}

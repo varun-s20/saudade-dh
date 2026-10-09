@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 300" width="240" height="300">
+<title>Letter stamp. PLACEHOLDER, client artwork pending</title>
+<defs>
+<filter id="rough" x="-3%" y="-3%" width="106%" height="106%"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="8" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="1.5" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="speck" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="1" seed="15"/><feColorMatrix values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 -7 5.1"/></filter>
+<mask id="ink" maskUnits="userSpaceOnUse" x="-150" y="-150" width="540" height="600"><rect x="-150" y="-150" width="540" height="600" fill="#fff" filter="url(#speck)"/></mask>
+<filter id="paper" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="11"/><feColorMatrix values="0 0 0 0 .55 0 0 0 0 .42 0 0 0 0 .3 0 0 0 .09 0"/></filter>
+<pattern id="lines" width="6" height="3.2" patternUnits="userSpaceOnUse"><path d="M0 1.6h6" stroke="#a9c1e0" stroke-width="1"/></pattern>
+<pattern id="chev" width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="18" fill="#c4402f"/><rect x="9" width="6" height="18" fill="#2b4c8c"/></pattern>
+<linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity=".25"/></linearGradient>
+<mask id="fadeM"><rect x="18" y="18" width="204" height="200" fill="url(#fade)"/></mask>
+<clipPath id="win"><rect x="18" y="18" width="204" height="200"/></clipPath>
+</defs>
+<rect width="240" height="300" fill="#fcf7ee"/>
+<g clip-path="url(#win)">
+<rect x="18" y="18" width="204" height="200" fill="url(#lines)" mask="url(#fadeM)"/>
+<g transform="translate(46 50) rotate(-7)">
+<rect x="3" y="4" width="150" height="98" fill="#2b4c8c" opacity=".18"/>
+<rect width="150" height="98" fill="#fcf7ee"/>
+<g mask="url(#ink)"><path d="M0 0h150v98H0zM7 7v84h136V7z" fill="url(#chev)" fill-rule="evenodd" transform="translate(.9 -.7)"/></g>
+<g mask="url(#ink)" filter="url(#rough)" fill="none" stroke="#2b4c8c">
+<rect width="150" height="98" stroke-width="1.2"/>
+<path d="M30 52c8-3 14 3 22 0s14-4 22 0 12 2 18-1M30 64c6-2 12 2 18 0s10-3 16 0M30 76c10-3 16 2 26-.5s12-2 20 0" stroke-width="1.3" stroke-linecap="round"/>
+<rect x="110" y="15" width="24" height="29" stroke-width="1" stroke-dasharray="1.6 1.4"/>
+<path d="M122 36c-6-4-7-9-3.6-10.5 1.8-.8 3.2.2 3.6 1.6.4-1.4 1.8-2.4 3.6-1.6 3.4 1.5 2.4 6.5-3.6 10.5z" fill="#c4402f" stroke="none"/>
+<circle cx="106" cy="34" r="11" stroke-width=".9"/>
+<path d="M88 26q4-3 8 0t8 0 8 0 8 0M88 31q4-3 8 0t8 0 8 0 8 0M88 36q4-3 8 0t8 0 8 0 8 0" stroke-width=".8"/>
+</g>
+<text x="16" y="84" font-family="Georgia,'Times New Roman',serif" font-size="8" font-style="italic" fill="#2b4c8c" letter-spacing=".8">par avion</text>
+</g>
+<g transform="translate(52 204) rotate(-33)">
+<g mask="url(#ink)">
+<path d="M18 -7.5H162a7.5 7.5 0 0 1 0 15H18z" fill="#a9c1e0" transform="translate(1.3 -.9)"/>
+</g>
+<g mask="url(#ink)" filter="url(#rough)" stroke="#2b4c8c" fill="none" stroke-linejoin="round">
+<path d="M18 -7.5H162a7.5 7.5 0 0 1 0 15H18z" stroke-width="1.3"/>
+<path d="M64 -7.5v15M70 -7.5v15M128 -7.5v15" stroke-width="1"/>
+<path d="M76 -3H122M76 2H122" stroke-width=".55"/>
+<path d="M100 -7.5V-12H138V-9.6" stroke-width="1.2"/>
+<path d="M18 -6L0 0L18 6z" fill="#fcf7ee" stroke-width="1.2"/>
+<path d="M0 0L11 0" stroke-width=".9"/>
+<circle cx="11.5" cy="0" r="1.4" fill="#2b4c8c" stroke="none"/>
+</g>
+</g>
+<path mask="url(#ink)" d="M50 206c-6 4-15 8-20 3-4-4 2-10 8-7 7 4-1 14-9 14" fill="none" stroke="#2b4c8c" stroke-width="1.3" stroke-linecap="round"/>
+</g><g mask="url(#ink)">
+<path fill="#a9c1e0" fill-rule="evenodd" transform="translate(.8 -.6)" d="M4 4h232v292H4zM10.5 10.5v279h219v-279z"/>
+<g filter="url(#rough)" fill="none" stroke="#2b4c8c">
+<rect x="14" y="14" width="212" height="272" stroke-width="1"/>
+<rect x="17.5" y="17.5" width="205" height="201" stroke-width="1.4"/>
+<path d="M30 252.5h180" stroke-width=".7"/>
+</g>
+<g font-family="Georgia,'Times New Roman',serif" fill="#2b4c8c" text-anchor="middle">
+<text x="120" y="244" font-size="17" letter-spacing="2.5" textLength="178" lengthAdjust="spacingAndGlyphs">CORRESPONDENCE</text>
+<text x="120" y="267" font-size="9.5" font-style="italic" letter-spacing=".6">No. 2 &#183; By hand &#183; Saudade</text>
+</g>
+</g>
+<g transform="translate(37 39)" mask="url(#ink)">
+<circle r="13.5" fill="#fcf7ee" stroke="#2b4c8c" stroke-width="1.2"/>
+<circle r="10.5" fill="none" stroke="#a9c1e0" stroke-width="1.6" transform="translate(.7 -.5)"/>
+<text y="5.5" font-family="Georgia,'Times New Roman',serif" font-size="15" font-style="italic" fill="#2b4c8c" text-anchor="middle">2</text>
+</g>
+<text x="120" y="281" font-family="'Courier New',Courier,monospace" font-size="6.6" letter-spacing="1.6" fill="#2b4c8c" fill-opacity=".72" text-anchor="middle">PLACEHOLDER &#183; CLIENT ART PENDING</text>
+<rect width="240" height="300" filter="url(#paper)"/>
+</svg>
