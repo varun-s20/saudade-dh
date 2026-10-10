@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { fontVariables } from "./fonts";
 import { Providers } from "./providers";
 import "@/styles/globals.css";
+import "@/styles/cursor.css";
+import { StampCursor } from "@/components/ui/StampCursor";
 
 export const metadata: Metadata = {
   title: { default: "Saudade", template: "%s · Saudade" },
@@ -25,7 +27,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={fontVariables} suppressHydrationWarning>
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <StampCursor />
+        </Providers>
       </body>
     </html>
   );

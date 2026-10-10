@@ -856,6 +856,34 @@ sender / recipient / admin flows) found the problems; the fixes follow a few pri
   are shorter words ("Cap and gown", "A year together") so they fit a third of a phone at 12px.
 - **Accepted:** the letter's "Dear ___" and sign-off lines are 42px tall, the letter paper's rule pitch (above
   the 24px WCAG 2.5.8 minimum); on 320px phones the code boxes are about 38px wide.
+- **Revised the same day (product owner: the hero letters and the year scene had shrunk too far on a laptop):**
+  - "MISSES YOU" is back to full size. From tablets up it may use the screen's whole width (less the gutters),
+    so it stays on one line at full size, and its line box hugs the letters (the inherited line height left
+    half a letter of empty space), which keeps the buttons above the fold at 1280×720 to 1536×730 instead of
+    shrinking the letters.
+  - The year scene wins room instead of shrinking: the site header slides away while the scene is pinned
+    (`html[data-immersive]`, back as the scene ends, on focus, or with the menu open); the cards are larger
+    against the envelope and rise from deeper in the pocket, a little less far (the rise sets the fan's
+    height); the text and the timeline stamps are back to within a few percent of their original sizes. At
+    1536×730 the cards went from 117px to 150px wide (164px originally, when the fan ran under the header).
+
+### D-080 · Hero letters on two rows, a "Contents" slip, a stamp cursor (2026-10-10)
+Product owner's review, replacing parts of D-079's revision:
+- **"MISSES YOU" is two rows at every size** ("MISSES" over "YOU"), at `clamp(3.6rem, min(0.6rem + 9.6vw,
+  19.5svh), 9.75rem)` (142px on a 1536×730 laptop window), with the line box hugging the letters, so the
+  buttons stay in view. The one-row, full-width version was too big.
+- **The year scene's images are bigger:** the timeline stamps (up to 7rem; 102px at 1536×730, from 84px) and the
+  cards out of the envelope (0.34 of the envelope's width, rising 92% of their height; 151px at 1536×730).
+  The fit factor is re-measured (`--fan-k` 1.03).
+- **"Contents" slip:** the photos / letter / voice / song tally is a small customs-style slip with a ticked box per
+  part, four in a row (two by two on a phone), every row the same height. It replaced uneven parcel tags whose
+  big photo count made one taller than the rest.
+- **Desktop cursor** (`components/ui/StampCursor.tsx`, `styles/cursor.css`): a navy dot exactly on the pointer
+  and a postmark ring trailing it on a spring; over anything clickable the ring becomes the logo's red heart
+  stamp, which presses flat on click; over the postcard rack, a "Drag" disc. Only for a mouse or trackpad on a
+  screen at least 1024px wide (never on phones or tablets, nor in a narrow window); text fields, embedded players
+  and the admin (`data-native-cursor`) keep the system cursor; the system cursor shows until it loads; reduced
+  motion drops the spring. It replaced a pen-nib cursor image.
 
 ## Sender & recipient build + integration (2026-10-08)
 

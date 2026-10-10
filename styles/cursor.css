@@ -1,0 +1,167 @@
+/*
+ * The desktop cursor (components/ui/StampCursor.tsx): a navy dot on the pointer, a postmark ring
+ * trailing it, the logo's red heart stamp over anything clickable, "Drag" over the rack. Only for
+ * a mouse or trackpad on a screen at least 1024px wide; it switches itself on by adding
+ * `has-stamp-cursor` to <html>, so until it loads (and everywhere else) the system cursor shows.
+ * Text fields, embedded players and the admin (`data-native-cursor`) keep the system cursor.
+ * Unlayered and `!important` on purpose: it must hide the cursors components set themselves.
+ */
+@media (hover: hover) and (pointer: fine) and (min-width: 64rem) {
+  html.has-stamp-cursor,
+  html.has-stamp-cursor * {
+    cursor: none !important;
+  }
+  html.has-stamp-cursor
+    :is(
+      input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"]),
+      textarea,
+      select,
+      iframe,
+      [contenteditable="true"],
+      [data-native-cursor],
+      [data-native-cursor] *
+    ) {
+    cursor: auto !important;
+  }
+  html.has-stamp-cursor [data-native-cursor] :is(a[href], button, [role="button"], summary, label[for]) {
+    cursor: pointer !important;
+  }
+}
+
+.sc {
+  position: fixed;
+  inset: 0 auto auto 0;
+  z-index: 2147483000;
+  pointer-events: none;
+}
+.sc__dot,
+.sc__follow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+}
+/* the dot sits exactly on the pointer */
+.sc__dot {
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--accent-navy);
+  box-shadow: 0 0 0 1.5px var(--paper-raised);
+  transition:
+    opacity 140ms ease,
+    scale 200ms var(--ease-out-strong);
+}
+.sc__ring,
+.sc__stamp,
+.sc__drag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition:
+    opacity 160ms ease,
+    scale 240ms var(--ease-out-strong),
+    rotate 240ms var(--ease-out-strong);
+}
+/* a postmark ring: thin navy, with a cream edge so it reads on the dark bands too */
+.sc__ring {
+  width: 38px;
+  height: 38px;
+  margin: -19px 0 0 -19px;
+  border: 1.5px solid color-mix(in srgb, var(--accent-navy) 70%, transparent);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--paper-raised) 55%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--paper-raised) 35%, transparent);
+}
+/* the logo's stamp: brick coral, perforated, a cream frame and heart. The outline and shadow sit
+ * on the wrapper (the face's perforation mask would clip them), so it reads on red buttons too. */
+.sc__stamp {
+  width: 40px;
+  height: 46px;
+  margin: -23px 0 0 -20px;
+  filter: drop-shadow(0 0 0.6px var(--paper-raised)) drop-shadow(0 0 0.6px var(--paper-raised)) drop-shadow(0 0 0.6px var(--paper-raised))
+    drop-shadow(0 3px 4px rgb(47 35 27 / 0.35));
+  opacity: 0;
+  scale: 0.5;
+  rotate: -14deg;
+}
+.sc__stamp-face {
+  --rp: 2.6px;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: var(--accent-red);
+  -webkit-mask:
+    radial-gradient(var(--rp), #0000 98%, #000) round calc(-1.5 * var(--rp)) calc(-1.5 * var(--rp)) / calc(3 * var(--rp)) calc(3 * var(--rp)),
+    linear-gradient(#000 0 0) no-repeat 50% / calc(100% - 3 * var(--rp)) calc(100% - 3 * var(--rp));
+  mask:
+    radial-gradient(var(--rp), #0000 98%, #000) round calc(-1.5 * var(--rp)) calc(-1.5 * var(--rp)) / calc(3 * var(--rp)) calc(3 * var(--rp)),
+    linear-gradient(#000 0 0) no-repeat 50% / calc(100% - 3 * var(--rp)) calc(100% - 3 * var(--rp));
+}
+.sc__stamp svg {
+  width: 100%;
+  height: 100%;
+}
+/* the drag cue: a navy disc with arrows */
+.sc__drag {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 1px;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  border-radius: 50%;
+  background: var(--accent-navy);
+  box-shadow: 0 0 0 1.5px var(--paper-raised);
+  color: var(--paper-raised);
+  font-family: var(--ff-postal);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0;
+  scale: 0.5;
+}
+.sc__drag svg {
+  width: 22px;
+  height: 11px;
+}
+
+/* states */
+.sc[data-mode="hidden"] :is(.sc__dot, .sc__ring) {
+  opacity: 0;
+}
+.sc[data-mode="link"] .sc__ring,
+.sc[data-mode="drag"] .sc__ring {
+  opacity: 0;
+  scale: 1.5;
+}
+.sc[data-mode="link"] .sc__dot,
+.sc[data-mode="drag"] .sc__dot {
+  opacity: 0;
+  scale: 0.4;
+}
+.sc[data-mode="link"] .sc__stamp {
+  opacity: 1;
+  scale: 1;
+  rotate: -6deg;
+}
+.sc[data-mode="drag"] .sc__drag {
+  opacity: 1;
+  scale: 1;
+}
+/* pressing: the stamp comes down flat, the ring tightens */
+.sc[data-down] .sc__ring {
+  scale: 0.8;
+}
+.sc[data-mode="link"][data-down] .sc__stamp {
+  scale: 0.84;
+  rotate: 0deg;
+}
+.sc[data-mode="drag"][data-down] .sc__drag {
+  scale: 0.9;
+}

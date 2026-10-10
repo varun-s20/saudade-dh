@@ -32,7 +32,7 @@
     position: relative;
     z-index: 2;
     /* the header floats over the sky; content starts just below the plane's flight path */
-    padding-top: calc(var(--head-h, 4.75rem) + clamp(3rem, 1.25rem + 3.5vw, 4.25rem));
+    padding-top: calc(var(--head-h, 4.75rem) + clamp(3rem, min(1.25rem + 3.5vw, 7.5svh), 4.25rem));
     text-align: center;
   }
   /* The airmail label (the `tag` utility), stuck on a little crooked */
@@ -51,17 +51,18 @@
     font-size: var(--fs-script);
     color: var(--accent-navy);
   }
-  /* The large letters: never taller than a fifth of the screen (so the buttons stay above the
-   * fold on a short laptop), and from tablets up never wider than one line ("MISSES YOU" sets
-   * at 6.91× its size; at 1536px wide the cap used to break it onto two lines). */
+  /* The large letters as two rows at every screen size: "MISSES" over "YOU", sized so the two
+   * rows, the line under them and the buttons fit a laptop screen (19.5svh), up to 9.75rem. The
+   * line box hugs the letters (the inherited line height added half a letter of empty space). */
   .hm-hero__ll {
     margin-top: 0.08em;
-    font-size: min(var(--fs-mega), 21svh);
+    font-size: clamp(3.6rem, min(0.6rem + 9.6vw, 19.5svh), 9.75rem);
+    line-height: 0.95;
   }
-  @media (min-width: 48rem) {
-    .hm-hero__ll {
-      font-size: min(var(--fs-mega), 21svh, calc(min(var(--measure-page), 100vw - 2 * var(--gutter)) / 7.1));
-    }
+  .hm-hero__ll .ll__word {
+    flex-direction: column;
+    align-items: center;
+    row-gap: 0.06em;
   }
   /* the words and buttons always sit above the letters' shadows */
   .hm-hero__lede,
@@ -71,7 +72,7 @@
   }
   .hm-hero__lede {
     max-width: 40rem;
-    margin: 2rem auto 0;
+    margin: clamp(1.25rem, 3svh, 2rem) auto 0;
     font-size: var(--fs-lede);
     font-weight: 500;
     color: var(--ink);
@@ -81,7 +82,7 @@
     flex-wrap: wrap;
     justify-content: center;
     gap: 0.75rem 1rem;
-    margin-top: 2rem;
+    margin-top: clamp(1.25rem, 3svh, 2rem);
   }
 
   /* A biplane towing a banner across the sky: the crossing is constant motion, so linear; the
@@ -1072,8 +1073,8 @@
    * lines would squeeze the envelope to an icon. */
   @media (max-width: 59.99rem) and (max-height: 42rem) {
     .hm-hype .hm-hype__ritual,
-    .hm-yr__added,
-    .hm-yr__tally {
+    .hm-yr .hm-yr__added,
+    .hm-yr .hm-yr__tally {
       display: none;
     }
     /* and the four stats become compact cards, so all of them fit the screen */
@@ -1161,6 +1162,11 @@
     grid-template-rows: auto minmax(0, 1fr);
     gap: 0.5rem;
     min-height: 0;
+    /* the header slides away while this scene is pinned (YearInEnvelope), so the scene starts
+     * near the top of the screen and its envelope gets that room */
+    padding-top: clamp(1rem, 3svh, 2rem);
+  }
+  .hm-yr[data-static] .hm-yr__grid {
     padding-top: calc(var(--head-h, 4.75rem) + clamp(0.75rem, 2svh, 2rem));
   }
   @media (min-width: 60rem) {
@@ -1175,7 +1181,7 @@
    * two): a wide but short laptop screen gets smaller type rather than an overflowing column. */
   .hm-yr__title {
     margin-top: 0.5rem;
-    font-size: clamp(1.6rem, min(1.2rem + 2.4vw, 0.9rem + 3.6svh), 3.4rem);
+    font-size: clamp(1.6rem, min(1.2rem + 2.4vw, 1rem + 5.2svh), 3.4rem);
     line-height: 0.98;
   }
   .hm-yr__now {
@@ -1184,7 +1190,7 @@
   }
   .hm-yr__date {
     font-family: var(--ff-display);
-    font-size: clamp(2.6rem, min(1.6rem + 6vw, 0.4rem + 9svh), 7.25rem);
+    font-size: clamp(2.6rem, min(1.6rem + 6vw, 0.4rem + 14svh), 7.25rem);
     line-height: 0.82;
     text-transform: uppercase;
     color: var(--accent-navy);
@@ -1197,7 +1203,7 @@
   }
   .hm-yr__moment {
     margin-top: 0.35rem;
-    font-size: clamp(1.5rem, min(1.2rem + 1.6vw, 0.8rem + 2.8svh), 2.6rem);
+    font-size: clamp(1.5rem, min(1.2rem + 1.6vw, 0.8rem + 4svh), 2.6rem);
     color: var(--accent-red);
   }
   .hm-yr__added {
@@ -1218,46 +1224,88 @@
       transform: translateY(10px);
     }
   }
+  /* What's in the envelope so far, as a customs "Contents" slip: a box ticked for each part.
+   * One row of four from 30rem up, two by two on a phone; every row the same height. */
   .hm-yr__tally {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
+    display: inline-block;
     margin-top: clamp(0.75rem, 2svh, 1.4rem);
+    padding: 0.5rem 0.85rem 0.6rem;
+    border: 1.5px solid color-mix(in srgb, var(--ink) 75%, transparent);
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--paper-raised) 92%, transparent);
+    box-shadow:
+      0 1px 0 rgb(47 35 27 / 0.08),
+      0 10px 18px -12px rgb(47 35 27 / 0.4);
+    rotate: -0.6deg;
   }
-  /* parcel tags: square-cornered, with a punched, reinforced hole at the tied end */
-  .hm-yr__tally > span {
-    --hole: color-mix(in srgb, var(--ink) 35%, transparent);
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.3rem;
-    padding: 0.32em 0.8em 0.26em 1.45em;
-    border: 1.5px dashed color-mix(in srgb, var(--ink) 45%, transparent);
-    border-radius: 2px;
-    background: radial-gradient(circle at 0.62em 50%, transparent 0.17em, var(--hole) 0.19em 0.29em, transparent 0.31em);
+  .hm-yr__tally-head {
+    margin-bottom: 0.45rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px dashed color-mix(in srgb, var(--ink) 35%, transparent);
     font-family: var(--ff-postal);
-    font-size: 0.72rem;
+    font-size: 0.62rem;
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.18em;
+    line-height: 1;
     text-transform: uppercase;
-    color: color-mix(in srgb, var(--ink) 55%, transparent);
-    transition:
-      background-color var(--dur-ui) ease,
-      color var(--dur-ui) ease,
-      border-color var(--dur-ui) ease;
+    color: var(--ink-faded);
   }
-  .hm-yr__tally > span:first-child,
-  .hm-yr__tally > span[data-on] {
-    --hole: var(--accent-ochre);
-    border-style: solid;
-    border-color: var(--ink);
-    background:
-      radial-gradient(circle at 0.62em 50%, transparent 0.17em, var(--hole) 0.19em 0.29em, var(--paper-raised) 0.31em);
+  .hm-yr__tally ul {
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+    gap: 0.45rem 1.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 30rem) {
+    .hm-yr__tally ul {
+      grid-template-columns: repeat(4, max-content);
+    }
+  }
+  .hm-yr__tally li {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--ff-postal);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: color-mix(in srgb, var(--ink) 45%, transparent);
+    transition: color var(--dur-ui) ease;
+  }
+  .hm-yr__tally li[data-on] {
     color: var(--ink);
   }
-  .hm-yr__tally b {
-    font-family: var(--ff-display);
-    font-size: 1.15em;
-    font-weight: 400;
+  .hm-yr__box {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 1.05rem;
+    height: 1.05rem;
+    border: 1.5px solid currentColor;
+    border-radius: 2px;
+    background: var(--paper-raised);
+    color: var(--accent-navy);
+  }
+  .hm-yr__box svg {
+    width: 0.8rem;
+    height: 0.8rem;
+    opacity: 0;
+    scale: 0.6;
+    transition:
+      opacity 160ms ease,
+      scale 260ms var(--ease-settle);
+  }
+  .hm-yr__tally li[data-on] .hm-yr__box {
+    border-color: var(--ink);
+  }
+  .hm-yr__tally li[data-on] .hm-yr__box svg {
+    opacity: 1;
+    scale: 1;
   }
   .hm-yr__note {
     display: none;
@@ -1296,10 +1344,10 @@
   .hm-yr__env {
     /* The envelope's width: as wide as the desk allows, and short enough that the whole fan fits
      * the desk's height. With every card risen, envelope + fan stand --fan-k envelope-widths tall
-     * (measured: 1.02 to 1.04 across screen sizes; 1rem spare for the cards' turn and shadows). */
-    --fan-k: 1.04;
+     * (measured 1.003 to 1.016 across screen sizes; 1rem spare for the cards' turn and shadows). */
+    --fan-k: 1.03;
     --ew: min(40rem, 92cqw, calc((100cqh - 1rem) / var(--fan-k)));
-    --cw: calc(var(--ew) * 0.28);
+    --cw: calc(var(--ew) * 0.34);
     position: relative;
     width: var(--ew);
     aspect-ratio: 600 / 380;
@@ -1330,7 +1378,7 @@
   }
   .hm-yr__fan {
     position: absolute;
-    bottom: 26%;
+    bottom: 19%;
     left: 50%;
     z-index: 1;
     width: 0;
@@ -1344,7 +1392,7 @@
     width: var(--cw);
     margin-left: calc(var(--cw) / -2);
     transform-origin: 50% 175%;
-    transform: translateY(calc(40% - var(--t, 1) * (122% + var(--lift, 0%)))) rotate(calc(var(--t, 1) * var(--a, 0deg)));
+    transform: translateY(calc(40% - var(--t, 1) * (92% + var(--lift, 0%)))) rotate(calc(var(--t, 1) * var(--a, 0deg)));
     opacity: calc(var(--t, 1) * 5);
   }
   .hm-yr__card[data-last] {
@@ -1502,8 +1550,8 @@
    * then a stamp hanging from each stop on a dotted thread. The lane is also the breathing room
    * between the envelope and the stamps. */
   .hm-yr__rail {
-    --stamp: clamp(2.9rem, min(2rem + 3.6vw, 9svh), 5.4rem);
-    --lane: clamp(2.75rem, min(2.5rem + 2vw, 6.5svh), 4.5rem);
+    --stamp: clamp(3.2rem, min(2.4rem + 4.2vw, 14svh), 7rem);
+    --lane: clamp(2.5rem, min(2.2rem + 1.6vw, 6svh), 4rem);
     position: relative;
     margin-top: clamp(0.25rem, 1.5svh, 1rem);
     padding-top: var(--lane);

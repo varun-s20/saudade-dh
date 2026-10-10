@@ -55,6 +55,19 @@
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
   }
+  /* Immersive scenes (the year in one envelope) hide the header while they are pinned, so the
+   * scene has the whole screen; it slides back as the scene ends, or as soon as it has focus or
+   * its menu is open. */
+  .pub-head {
+    transition:
+      background-color 240ms ease,
+      border-color 240ms ease,
+      color 240ms ease,
+      translate 260ms var(--ease-out-strong);
+  }
+  html[data-immersive] .pub-head:not(:focus-within):not(:has(.pub-menu:not([hidden]))) {
+    translate: 0 -100%;
+  }
   .pub-head[data-tone="light"]:not([data-scrolled]):not(:has(.pub-menu:not([hidden]))) {
     --focus-ring: var(--paper-raised);
     color: var(--paper-raised);

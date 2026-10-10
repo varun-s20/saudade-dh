@@ -17,7 +17,7 @@
  */
 import Image from "next/image";
 import { motion, useMotionValueEvent, useScroll, useTransform, type MotionValue } from "motion/react";
-import { useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { HeartSeal } from "@/components/stamps/HeartSeal";
 import { Stamp } from "@/components/stamps/Stamp";
 import { useReducedMotionPref } from "@/lib/hooks/useReducedMotionPref";
@@ -96,12 +96,21 @@ export function YearInEnvelope() {
   const reduced = useReducedMotionPref();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
   const [chapter, setChapter] = useState(0);
+  // While the scene is pinned the site header slides away (public.css, html[data-immersive]), so
+  // the envelope and its year get the whole screen.
+  const [pinned, setPinned] = useState(false);
 
   useMotionValueEvent(scrollYProgress, "change", (p) => {
     let c = 0;
     for (let i = 0; i < N; i++) if (p >= start(i) - 0.02) c = i;
     if (c !== chapter) setChapter(c);
+    const on = !reduced && p > 0.002 && p < 0.998;
+    if (on !== pinned) setPinned(on);
   });
+  useEffect(() => {
+    document.documentElement.toggleAttribute("data-immersive", pinned);
+    return () => document.documentElement.removeAttribute("data-immersive");
+  }, [pinned]);
 
   const shown = reduced ? N - 1 : chapter;
   const ch = CHAPTERS[shown];
@@ -137,14 +146,29 @@ export function YearInEnvelope() {
               </p>
             </div>
 
-            <p aria-hidden className="hm-yr__tally">
-              <span>
-                <b>{photos}</b> photo{photos === 1 ? "" : "s"}
-              </span>
-              <span data-on>letter</span>
-              <span data-on={shown >= 1 || undefined}>voice</span>
-              <span data-on={shown >= 3 || undefined}>song</span>
-            </p>
+            {/* what's in the envelope so far, as a customs "Contents" slip */}
+            <div aria-hidden className="hm-yr__tally">
+              <p className="hm-yr__tally-head">Contents</p>
+              <ul>
+                {(
+                  [
+                    ["photos", `${photos} photo${photos === 1 ? "" : "s"}`, true],
+                    ["letter", "Letter", true],
+                    ["voice", "Voice", shown >= 1],
+                    ["song", "Song", shown >= 3],
+                  ] as const
+                ).map(([key, label, on]) => (
+                  <li key={key} data-on={on || undefined}>
+                    <span className="hm-yr__box">
+                      <svg viewBox="0 0 16 16" aria-hidden>
+                        <path d="M3 8.5l3.2 3.2L13 4.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            </div>
 
             <ol className="sr-only">
               {CHAPTERS.map((c, i) => (
