@@ -885,6 +885,20 @@ Product owner's review, replacing parts of D-079's revision:
   and the admin (`data-native-cursor`) keep the system cursor; the system cursor shows until it loads; reduced
   motion drops the spring. It replaced a pen-nib cursor image.
 
+### D-081 · Seal & send: a bigger envelope, no dead space; the address the heart opens (2026-10-10)
+- **Dead space fixed.** The room kept above the envelope for its open flap was a percentage padding on the
+  stage, which CSS measures against the column (862px), not the envelope (352px): it reserved 325px for a
+  149px flap. It is now a spacer sized from the envelope's own width.
+- **Bigger envelope:** as wide as the column allows (up to 34rem), short enough that the open envelope and the
+  start of the hold prompt fit under the title, never below the old 22rem (457px on a 1440×900 screen).
+- **The sealed heading:** while sealing in front of you, the intro stays (nothing jumps) and "It's sealed."
+  rises into the flap's room, centred above the envelope. Opened already sealed, the heading sits directly above
+  the closed envelope with no flap room.
+- **[SHOWCASE] The address the heart opens** (`site.showRecipientLinkAfterSeal`): after sealing, the sender
+  sees `https://<site>/t/<slug>` with Copy and Open, so the first tap can be tried with no ceramic. In the
+  product nobody sends anything: the recipient holds their phone to the heart and the chip opens that page.
+  Set the flag to false for launch.
+
 ## Sender & recipient build + integration (2026-10-08)
 
 ### D-041 · Prototype media stored as bytes, not Blobs

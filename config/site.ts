@@ -25,6 +25,13 @@ export const site = {
   /** [OPEN O6] Ask for the sender's email after claiming (for link recovery). */
   captureSenderEmailAtClaim: true,
 
+  /**
+   * [SHOWCASE] After sealing, show the sender the address the ceramic's heart opens (with copy and
+   * open), so the first tap can be tried without a ceramic. Set false for launch, where the chip is
+   * the only way in.
+   */
+  showRecipientLinkAfterSeal: true,
+
   /** [PROPOSED] Optional paper/seal sound after the recipient's tap gesture, with a mute toggle. */
   revealSound: true,
 

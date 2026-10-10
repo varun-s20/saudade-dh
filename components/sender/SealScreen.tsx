@@ -11,7 +11,7 @@
  * Already sealed or opened → that state, never a re-seal. Nothing inside → a gentle way to the editors.
  */
 import Link from "next/link";
-import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type PointerEvent as ReactPointerEvent } from "react";
 import { Envelope, type EnvelopeState } from "@/components/envelope/Envelope";
 import { ENVELOPE_ASPECT, FLAP_DEPTH, SEAL_CENTER_Y, SEAL_SIZE } from "@/components/envelope/Envelope";
 import { Postmark } from "@/components/paper/Postmark";
@@ -20,6 +20,7 @@ import { Stamp } from "@/components/stamps/Stamp";
 import { InkButton, InkLink } from "@/components/ui/InkButton";
 import { IconChevronRight, IconEye, IconRefresh } from "@/components/ui/icons";
 import { r2 } from "@/components/paper/seeded";
+import { site } from "@/config/site";
 import { STAMPS } from "@/config/stamps";
 import { useReducedMotionPref } from "@/lib/hooks/useReducedMotionPref";
 import { filledKinds } from "@/lib/recipient-mode";
@@ -134,23 +135,24 @@ function SealBody({ token, env, refresh }: { token: string; env: SenderEnvelope;
         {announce}
       </p>
 
-      {!isSealed ? (
+      {/* kept through the sealing moment, so nothing jumps while the flap closes */}
+      {!isSealed || ceremony ? (
         <p className="ss-lede">
           Once sealed, the next tap on the ceramic opens it, with the stamps appearing one by one. You can keep adding to it afterwards.
         </p>
       ) : null}
 
-      {/* The stage: room above the envelope for the open flap (and later the sealed heading). */}
-      <div className="ss-seal-stage mt-4" style={{ paddingTop: `${r2((FLAP_DEPTH / ENVELOPE_ASPECT) * 100)}%` }}>
-        {isSealed ? (
-          <div className={cn("absolute inset-x-0 top-0 text-center", ceremony && "ss-rise")}>
-            <p className="postal-label text-postmark">
-              {revealedAt ? `Opened on ${dayMonth(revealedAt)}` : sealedAt ? `Sealed on ${dayMonth(sealedAt)}` : "Sealed"}
-            </p>
-            <h2 ref={headingRef} tabIndex={-1} className="mt-2 font-display text-4xl leading-tight text-ink outline-none">
-              {revealedAt ? "They've opened it." : "It's sealed."}
-            </h2>
-            <p className="mx-auto mt-1 max-w-xs text-ink-soft">{revealedAt ? "Anything you add now appears the next time they tap." : "Their first tap will open it."}</p>
+      {/* Already sealed when the page opened: the heading simply sits above the closed envelope. */}
+      {isSealed && !ceremony ? <SealedHeading headingRef={headingRef} sealedAt={sealedAt} revealedAt={revealedAt} className="mt-2" /> : null}
+
+      {/* The stage. While the flap is open (or closing) it keeps room above the envelope for the
+          flap: a spacer sized from the envelope's own width (FLAP_DEPTH of its height). Once sealed
+          in front of you, the heading rises into that room, just above the envelope. */}
+      <div className={cn("ss-seal-stage", isSealed && !ceremony ? "mt-6" : "mt-4")}>
+        {isSealed && !ceremony ? null : <div aria-hidden style={{ paddingTop: `${r2((FLAP_DEPTH / ENVELOPE_ASPECT) * 100)}%` }} />}
+        {isSealed && ceremony ? (
+          <div className="absolute inset-x-0 top-0 flex flex-col justify-center" style={{ aspectRatio: `${ENVELOPE_ASPECT / FLAP_DEPTH}` }}>
+            <SealedHeading headingRef={headingRef} sealedAt={sealedAt} revealedAt={revealedAt} className="ss-rise" />
           </div>
         ) : null}
 
@@ -176,9 +178,31 @@ function SealBody({ token, env, refresh }: { token: string; env: SenderEnvelope;
           Sealing…
         </p>
       ) : (
-        <WhatNext token={token} animate={ceremony} opened={Boolean(revealedAt)} />
+        <WhatNext token={token} slug={env.unit.slug} animate={ceremony} opened={Boolean(revealedAt)} />
       )}
     </>
+  );
+}
+
+function SealedHeading({
+  headingRef,
+  sealedAt,
+  revealedAt,
+  className,
+}: {
+  headingRef: React.RefObject<HTMLHeadingElement | null>;
+  sealedAt: string | null;
+  revealedAt: string | null;
+  className?: string;
+}) {
+  return (
+    <div className={cn("text-center", className)}>
+      <p className="postal-label text-postmark">{revealedAt ? `Opened on ${dayMonth(revealedAt)}` : sealedAt ? `Sealed on ${dayMonth(sealedAt)}` : "Sealed"}</p>
+      <h2 ref={headingRef} tabIndex={-1} className="mt-2 font-display text-4xl leading-tight text-ink outline-none">
+        {revealedAt ? "They've opened it." : "It's sealed."}
+      </h2>
+      <p className="mx-auto mt-1 max-w-xs text-ink-soft">{revealedAt ? "Anything you add now appears the next time they tap." : "Their first tap will open it."}</p>
+    </div>
   );
 }
 
@@ -387,7 +411,15 @@ function ReadyFooter({ errorText, onSealNow }: { errorText: string | null; onSea
   );
 }
 
-function WhatNext({ token, animate, opened }: { token: string; animate: boolean; opened: boolean }) {
+const noop = () => () => {};
+const useOrigin = () =>
+  useSyncExternalStore(
+    noop,
+    () => window.location.origin,
+    () => "",
+  );
+
+function WhatNext({ token, slug, animate, opened }: { token: string; slug: string; animate: boolean; opened: boolean }) {
   const links = senderLinks(token);
   return (
     <section aria-labelledby="what-next" className={cn("mt-8", animate && "ss-rise")} style={animate ? { animationDelay: "var(--motion-dur-slow)" } : undefined}>
@@ -418,6 +450,7 @@ function WhatNext({ token, animate, opened }: { token: string; animate: boolean;
           </>
         )}
       </ol>
+      {site.showRecipientLinkAfterSeal ? <RecipientLink slug={slug} /> : null}
       <div className="mt-8 flex flex-col gap-3">
         <InkLink href={links.home} fullWidth>
           Back to your envelope
@@ -456,6 +489,45 @@ function NothingToSeal({ token }: { token: string }) {
       <InkLink href={links.home} variant="quiet" className="mt-6">
         Back to your envelope
       </InkLink>
+    </div>
+  );
+}
+
+/**
+ * [SHOWCASE] The address the ceramic's heart opens. In the product, nobody sends anything: the
+ * recipient holds their phone to the heart and the chip opens this page. With no ceramic in the
+ * showcase, the sender (or the presenter) can open or send this address to try the first tap.
+ * Off with `site.showRecipientLinkAfterSeal` before launch.
+ */
+function RecipientLink({ slug }: { slug: string }) {
+  const origin = useOrigin();
+  const url = `${origin}/t/${slug}`;
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    } catch {
+      // the address stays visible to copy by hand
+    }
+  };
+  return (
+    <div className="ss-recip mt-6">
+      <p className="postal-label text-ink-soft">The address the heart opens</p>
+      <p className="mt-1 text-[0.95rem] leading-snug text-ink-soft">
+        In the ceramic, the heart opens this page when they tap it with their phone. With no ceramic to hand, open it or send it to them
+        to try the first tap.
+      </p>
+      <p className="ss-recip__url mt-3 font-mono text-sm break-all text-ink">{url}</p>
+      <div className="mt-3 flex flex-wrap gap-x-4">
+        <InkButton variant="quiet" onClick={copy}>
+          {copied ? "Copied" : "Copy the address"}
+        </InkButton>
+        <InkLink href={url} variant="quiet" target="_blank">
+          Open it
+        </InkLink>
+      </div>
     </div>
   );
 }

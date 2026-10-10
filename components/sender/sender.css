@@ -1025,11 +1025,20 @@
   }
 
   /* ── Seal & send ──────────────────────────────────────────────────────── */
+  /* As wide as the column allows, and short enough that the open envelope (flap included, 1.13
+   * of its width tall) and the start of the hold-to-seal prompt fit under the page's title; never
+   * smaller than it used to be (22rem). */
   .ss-seal-stage {
     position: relative;
     margin-inline: auto;
-    width: 100%;
-    max-width: 22rem;
+    width: min(100%, 34rem, max(22rem, calc((100svh - 24rem) / 1.13)));
+  }
+  /* [SHOWCASE] the address the heart opens */
+  .ss-recip {
+    padding: 1rem 1.1rem 0.6rem;
+    border: 1.5px dashed var(--paper-edge);
+    border-radius: var(--r-soft);
+    background: color-mix(in srgb, var(--paper-raised) 70%, transparent);
   }
 
   .ss-hold {
