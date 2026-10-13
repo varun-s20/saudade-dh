@@ -275,7 +275,7 @@ export default function DirectionsPage() {
             <p className={letterLine}>Dear Theo, it&apos;s raining here the way it used to…</p>
             <p className="postal-label font-bold text-postmark">No. 1 · Photographs · 08 Oct 2026</p>
             <p className="text-[0.8125rem] text-ink-faded">
-              Bowlby One (display) · Grand Hotel (script) · Karla (UI) · Nanum Pen Script (the sender&apos;s hand) · Courier Prime (postal labels)
+              Bowlby One (display) · Nanum Pen Script (the hand and the script word) · Karla (reading and labels)
             </p>
           </div>
         }

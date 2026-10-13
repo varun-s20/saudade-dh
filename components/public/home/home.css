@@ -25,7 +25,7 @@
     aspect-ratio: 1;
     translate: -50% 0;
     border-radius: 50%;
-    background: radial-gradient(circle, rgb(255 222 140 / 0.95) 0 55%, rgb(255 222 140 / 0) 70%);
+    background: radial-gradient(circle, rgb(240 190 110 / 0.22) 0 50%, rgb(240 190 110 / 0) 70%);
     pointer-events: none;
   }
   .hm-hero__inner {
@@ -49,7 +49,7 @@
   .hm-hero__greet {
     display: block;
     font-size: var(--fs-script);
-    color: var(--accent-navy);
+    color: var(--paper-raised);
   }
   /* The large letters as two rows at every screen size: "MISSES" over "YOU", sized so the two
    * rows, the line under them and the buttons fit a laptop screen (19.5svh), up to 9.75rem. The
@@ -75,7 +75,7 @@
     margin: clamp(1.25rem, 3svh, 2rem) auto 0;
     font-size: var(--fs-lede);
     font-weight: 500;
-    color: var(--ink);
+    color: color-mix(in srgb, var(--paper) 92%, transparent);
   }
   .hm-hero__ctas {
     display: flex;
@@ -361,7 +361,7 @@
     --scene: var(--grad-sunset);
   }
   .hm-scene--sky {
-    --scene: var(--grad-sky);
+    --scene: linear-gradient(180deg, #c5d1de 0%, #a3b4c7 100%);
   }
   .hm-scene--coral {
     --scene: linear-gradient(180deg, #f6b9a3 0%, #f07a5a 100%);
@@ -387,6 +387,7 @@
     bottom: 0.5rem;
     left: 0;
     font-family: var(--ff-script);
+    font-size-adjust: var(--fsa-script);
     font-size: clamp(1.6rem, 1.3rem + 1vw, 2.05rem);
     font-weight: 400;
     line-height: 1;
@@ -773,6 +774,7 @@
   }
   .hm-phone__prompt {
     font-family: var(--ff-script);
+    font-size-adjust: var(--fsa-script);
     font-size: clamp(0.95rem, 0.8rem + 0.5vw, 1.2rem);
     line-height: 1.05;
     color: var(--paper);
@@ -1873,11 +1875,8 @@
     font-weight: 500;
     line-height: 1.45;
   }
-  .kn-scene.band-sea .kn-body {
+  .kn-scene:is(.band-sea, .band-sky) .kn-body {
     color: color-mix(in srgb, var(--paper) 90%, transparent);
-  }
-  .kn-scene.band-sky :where(.display) :where(em) {
-    color: var(--accent-navy);
   }
   .kn-go {
     position: absolute;

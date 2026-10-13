@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Claim your code" };
 /** S2: code entry, written on the back of a postcard; the sky masthead deals out the four stamps. */
 export default function ClaimPage() {
   return (
-    <PublicShell cta={false}>
+    <PublicShell cta={false} headTone="light">
       <PageMasthead
         tone="sky"
         eyebrow="Step 1 of 3 · Claim"

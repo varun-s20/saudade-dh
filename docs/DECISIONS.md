@@ -885,6 +885,24 @@ Product owner's review, replacing parts of D-079's revision:
   and the admin (`data-native-cursor`) keep the system cursor; the system cursor shows until it loads; reduced
   motion drops the spring. It replaced a pen-nib cursor image.
 
+### D-082 · Client round 1 (Zeya, 13 Oct): three fonts, muted dark blue, the letter writes itself (2026-10-13)
+- **Three faces, not five.** Zeya: "only 2-3 styles… I'm liking 'chosen for you' and 'side A' or 'comes the sun'".
+  Kept Bowlby One ("HERE COMES THE SUN": headlines), Nanum Pen Script ("chosen for you": the letter, names and every
+  script word) and Karla (reading text, buttons, and the postal labels as tracked capitals). Dropped Grand Hotel and
+  Courier Prime. The `--ff-script` / `--ff-postal` tokens stay and now point at Nanum Pen / Karla, so no markup
+  changed. Nanum Pen draws capitals at 0.56 of the em against Grand Hotel's ~0.68, so every script use carries
+  `font-size-adjust: var(--fsa-script)` (`cap-height 0.68`): same visual size, unchanged line boxes. If she prefers
+  "SIDE A" (Courier Prime) over Bowlby for headlines, that is a loader swap in `app/fonts.ts` plus `--ff-display`.
+- **Cyan → muted dark blue.** The turquoise sky, sea and dusty blue are now `#3b5878` / `#2f4a68` / `#b7c5d6`.
+  The sky band became a dark band (cream text, `headTone="light"` on the pages that open on it); light panels that
+  carry dark drawings use the new `band-mist`. The hero's sun is a low warm glow so cream text reads over it.
+- **The letter writes itself out** the first time it is opened, then simply reads (like the opening reveal).
+  `LetterWorld typeOut`: character by character (graphemes), pausing at punctuation and line ends, ~34 a second,
+  never longer than 18 s; the unwritten words hold their place so nothing reflows; the page follows the pen until
+  the reader scrolls. A tap, Enter/Space or "Show the whole letter" finishes it. Screen readers get the whole text
+  at once; reduced motion skips it. Live route: once per letter version per device (`useDevice.lettersRead`, so an
+  edited letter is written out again). Preview: every "First tap" run, never in "Coming back".
+
 ### D-081 · Seal & send: a bigger envelope, no dead space; the address the heart opens (2026-10-10)
 - **Dead space fixed.** The room kept above the envelope for its open flap was a percentage padding on the
   stage, which CSS measures against the column (862px), not the envelope (352px): it reserved 325px for a

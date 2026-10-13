@@ -11,14 +11,19 @@
  * Tapping a stamp opens its world in a <Sheet variant="world"> that grows out of the stamp; each
  * world is lazy-loaded. Focus returns to the stamp on close (Sheet).
  *
- * This component records NOTHING. The live route passes `onRevealComplete` (which calls
- * services.reveal.markRevealed); the preview passes nothing and uses variant="preview".
+ * This component records NOTHING on the server. The live route passes `onRevealComplete` (which
+ * calls services.reveal.markRevealed); the preview passes nothing and uses variant="preview".
+ *
+ * The letter writes itself out the first time it is opened (D-082): on the live route, once per
+ * letter version on this device (the device store remembers); in the preview, on every "First tap"
+ * run, and never in "Coming back".
  */
 import { motion } from "motion/react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import type { RecipientEnvelope, StampKind } from "@/lib/services/types";
 import { filledKinds, recipientName, senderName } from "@/lib/recipient-mode";
 import { STAMPS } from "@/config/stamps";
+import { useDevice } from "@/lib/state/device";
 import { FirstTapReveal, type RevealResult } from "@/components/reveal/FirstTapReveal";
 import { EnvelopeView } from "@/components/envelope/EnvelopeView";
 import { Sheet } from "@/components/ui/Sheet";
@@ -79,6 +84,16 @@ export function RecipientExperience({
   const [shown, setShown] = useState<StampKind | null>(null);
   const [epoch, setEpoch] = useState(0);
   const [settled, setSettled] = useState(mode !== "first_tap");
+
+  // The letter types itself out on its first reading, then simply reads.
+  const letterVersion = contents.letter?.updatedAt ?? "1";
+  const readOnDevice = useDevice((s) => s.lettersRead[env.slug]);
+  const [typedHere, setTypedHere] = useState(false);
+  const typeLetter = !typedHere && (variant === "preview" ? mode === "first_tap" : readOnDevice !== letterVersion);
+  const letterTyped = useCallback(() => {
+    setTypedHere(true);
+    if (variant === "live") useDevice.getState().markLetterRead(env.slug, letterVersion);
+  }, [variant, env.slug, letterVersion]);
 
   // Activity (README rule 4): a hidden route closes its world; when shown again it starts on the
   // envelope, with a fresh sheet (no stale close animation, audio/embeds already torn down).
@@ -160,7 +175,7 @@ export function RecipientExperience({
         originRect={world?.rect ?? null}
         closeLabel="Back to the envelope"
       >
-        {shown ? <StampWorld kind={shown} env={env} fromName={fromName} /> : null}
+        {shown ? <StampWorld kind={shown} env={env} fromName={fromName} typeLetter={typeLetter} onLetterTyped={letterTyped} /> : null}
       </Sheet>
     </>
   );

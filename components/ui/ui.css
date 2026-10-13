@@ -253,10 +253,10 @@
   .sd-ink--quiet .sd-ink__arrow {
     color: var(--accent-red);
   }
-  :where(.band-cobalt, .band-sea, .band-ink) .sd-ink--quiet .sd-ink__label {
+  :where(.band-cobalt, .band-sea, .band-ink, .band-sky) .sd-ink--quiet .sd-ink__label {
     text-decoration-color: var(--accent-ochre);
   }
-  :where(.band-cobalt, .band-sea, .band-ink) .sd-ink--quiet .sd-ink__arrow {
+  :where(.band-cobalt, .band-sea, .band-ink, .band-sky) .sd-ink--quiet .sd-ink__arrow {
     color: var(--accent-ochre);
   }
   @media (hover: hover) and (pointer: fine) {
@@ -269,7 +269,7 @@
   }
 
   /* On colour bands, the outlined button turns postcard-white with a mustard shadow */
-  :where(.band-cobalt, .band-sea, .band-ink) .sd-ink--secondary {
+  :where(.band-cobalt, .band-sea, .band-ink, .band-sky) .sd-ink--secondary {
     --line: var(--ink);
     --shade: var(--accent-ochre);
   }

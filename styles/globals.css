@@ -156,6 +156,7 @@
    * like "Greetings from" sitting on the big letters. Zero specificity, so utilities win. */
   :where(.display, .ss-title, .font-display) :where(em, i) {
     font-family: var(--ff-script);
+    font-size-adjust: var(--fsa-script);
     font-style: normal;
     font-weight: 400;
     font-size: 1.12em;
@@ -169,6 +170,7 @@
   }
   :where(.display-plain) :where(em, i) {
     font-family: var(--ff-script);
+    font-size-adjust: var(--fsa-script);
     font-style: normal;
     font-weight: 400;
     font-size: 1.15em;
@@ -228,9 +230,15 @@
   text-transform: uppercase;
 }
 
+/* The Tailwind font-script class: the same scaled hand (see --fsa-script) */
+.font-script {
+  font-size-adjust: var(--fsa-script);
+}
+
 /* "Greetings from…": the script hand */
 @utility script {
   font-family: var(--ff-script);
+  font-size-adjust: var(--fsa-script);
   font-weight: 400;
   line-height: 0.95;
   letter-spacing: 0;
@@ -305,6 +313,18 @@
   background-size:
     var(--texture-linen-size),
     100% 100%,
+    100% 100%;
+  color: var(--paper);
+  --focus-ring: var(--paper-raised);
+  --on: var(--paper-raised);
+}
+
+/* A soft dusty-blue panel for drawings in dark ink (the light partner of the sky) */
+@utility band-mist {
+  background-color: var(--accent-dusty-blue);
+  background-image: var(--texture-linen-light), var(--texture-rays);
+  background-size:
+    var(--texture-linen-size),
     100% 100%;
   color: var(--ink);
 }

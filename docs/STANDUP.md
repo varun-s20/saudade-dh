@@ -2,6 +2,20 @@
 
 Short written stand-up per working day: done / next / blocked. Newest first.
 
+## 2026-10-13 · Client round 1 (D-082)
+
+**Done**
+- Zeya's feedback: three fonts (Bowlby One, Nanum Pen Script, Karla; Grand Hotel and Courier Prime gone), the
+  cyan replaced by a muted dark blue across the site, and the letter now writes itself out on its first reading
+  (instant on revisits, skippable, whole text for screen readers).
+- The 404 page's text re-coloured for the dark sky.
+
+**Next:** Zeya's verdict on the fonts (Courier "SIDE A" headlines is a loader swap if she prefers it); reset the
+sample envelope's reveal after the deploy so she can see the opening again.
+
+**Note:** the local Playwright Chromium (125) ignores `font-size-adjust`, so check script sizes in a current
+Chrome/Safari, not in its screenshots.
+
 ## 2026-10-10 · Day 3: every screen size (D-079)
 
 **Done**

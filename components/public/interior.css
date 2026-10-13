@@ -27,7 +27,10 @@
     pointer-events: none;
   }
   .ix-head--sea .ix-head__sun {
-    background: radial-gradient(circle, rgb(168 220 226 / 0.35) 0 40%, rgb(168 220 226 / 0) 70%);
+    background: radial-gradient(circle, rgb(183 197 214 / 0.3) 0 40%, rgb(183 197 214 / 0) 70%);
+  }
+  .ix-head--sky .ix-head__sun {
+    background: radial-gradient(circle, rgb(240 190 110 / 0.28) 0 45%, rgb(240 190 110 / 0) 70%);
   }
   .ix-head__inner {
     position: relative;
@@ -67,9 +70,6 @@
     /* inked on by a roller, top to bottom */
     animation: ix-roll 760ms var(--ease-in-out-strong) 80ms backwards;
   }
-  .ix-head--sky .ix-head__title :where(em, i) {
-    color: var(--accent-navy);
-  }
   .ix-head__title :where(em, i) {
     display: inline-block;
     padding-inline: 0.04em;
@@ -84,7 +84,7 @@
     line-height: 1.5;
     animation: ix-rise 640ms var(--ease-out-strong) 300ms backwards;
   }
-  .ix-head--sea .ix-head__lede {
+  :is(.ix-head--sea, .ix-head--sky) .ix-head__lede {
     color: color-mix(in srgb, var(--paper) 92%, transparent);
   }
   .ix-head__art {
@@ -193,6 +193,7 @@
   /* "Dear Saudade," in the script hand, at the top of the message side */
   .ix-dear {
     font-family: var(--ff-script);
+    font-size-adjust: var(--fsa-script);
     font-size: clamp(1.9rem, 1.5rem + 1.4vw, 2.6rem);
     line-height: 1;
     color: var(--accent-navy);

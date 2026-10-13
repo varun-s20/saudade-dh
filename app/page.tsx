@@ -11,7 +11,7 @@ import { PublicShell } from "@/components/public/PublicShell";
  */
 export default function Home() {
   return (
-    <PublicShell>
+    <PublicShell headTone="light">
       <Hero />
       <Wish />
       <CoverStack under={<HowItWorks />} over={<FourStamps />} />

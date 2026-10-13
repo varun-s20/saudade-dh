@@ -59,7 +59,7 @@ export function postmarkDateParts(input: string): [string, string] {
 const RING = 100;
 const LINES_W = 100;
 
-/** Font size so `text` fits along an arc of `arc` units in the postal face (Courier Prime, ≈0.72em per glyph incl. tracking). */
+/** Font size so `text` fits along an arc of `arc` units in the postal face (≈0.72em per glyph incl. tracking; generous for Karla's tracked capitals). */
 const fitSize = (text: string, arc: number, max: number) => r2(Math.min(max, arc / (Math.max(text.length, 1) * 0.74)));
 
 function starPath(cx: number, cy: number, r: number): string {

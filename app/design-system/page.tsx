@@ -119,7 +119,7 @@ function PlaceholderNotice() {
 
 function TypeSection() {
   return (
-    <Section id="type" no="02" title="Type" lede="Five voices: large-letter block capitals for headlines, a 1940s sign-painter script for the word that carries the feeling, a warm humanist sans for everything you read and tap, a legible handwriting for the letter, and a typewriter for anything postal. All OFL; swap the loaders in app/fonts.ts.">
+    <Section id="type" no="02" title="Type" lede="Three faces (D-082): large-letter block capitals for headlines, a real-pen handwriting for the letter and the word that carries the feeling, and a warm humanist sans for everything you read and tap, labels included. All OFL; swap the loaders in app/fonts.ts.">
       <div className="grid gap-10 lg:grid-cols-2">
         <div>
           <SubHead note="Bowlby One · --ff-display · the display utility (uppercase)">Display</SubHead>
@@ -127,16 +127,16 @@ function TypeSection() {
           <p className="display mt-4 text-[1.75rem] text-ink">A letter for someone you miss.</p>
           <p className="mt-3 text-[0.8125rem] text-ink-faded">
             44 / 28px. Headlines and numbers, always in capitals. An <Tok>&lt;em&gt;</Tok> inside switches to the script hand in post-box red (ochre on
-            turquoise bands, navy on the sky).
+            the blue bands).
           </p>
 
-          <SubHead note="Grand Hotel · --ff-script · the script utility">Script</SubHead>
+          <SubHead note="Nanum Pen Script · --ff-script · the script utility (scaled by --fsa-script)">Script</SubHead>
           <p className="script text-[2.6rem] text-navy">Greetings from someone who misses you</p>
           <p className="mt-3 text-[0.8125rem] text-ink-faded">
             The &ldquo;Greetings from&rdquo; line, the recipient&apos;s prompt, and the paired word in headings. One phrase at a time, never paragraphs.
           </p>
 
-          <SubHead note="Courier Prime · --ff-postal · labels and codes only">Postal</SubHead>
+          <SubHead note="Karla, tracked capitals · --ff-postal · labels and codes only">Postal</SubHead>
           <p className="font-postal text-[1.75rem] tracking-[0.06em] text-ink">SAUD-3K7M</p>
           <p className="postal-label mt-2 text-postmark">No. 1 · Photographs · 08 Oct 2026</p>
           <p className="mt-3 text-[0.8125rem] text-ink-faded">

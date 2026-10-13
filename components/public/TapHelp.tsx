@@ -116,7 +116,7 @@ export function TapHelp() {
           className="mt-8 grid items-center gap-8 md:grid-cols-[0.9fr_1.1fr] md:gap-12"
         >
           <div className="postcard">
-            <div key={active} className="ix-swap band-sky overflow-hidden rounded-[calc(var(--r-card)-6px)] px-5 pt-10 pb-3">
+            <div key={active} className="ix-swap band-mist overflow-hidden rounded-[calc(var(--r-card)-6px)] px-5 pt-10 pb-3">
               <TapIllustration variant={active} />
             </div>
           </div>

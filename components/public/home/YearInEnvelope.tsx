@@ -47,7 +47,7 @@ const CHAPTERS: { month: string; year: string; moment: string; added: string; se
     year: "2026",
     moment: "A hard week",
     added: "a voice note and a coffee",
-    season: "linear-gradient(180deg, #b9dde6 0%, #8ec6d3 100%)",
+    season: "linear-gradient(180deg, #c9d3df 0%, #a9b8c9 100%)",
     thumb: "/demo/photos/04.jpg",
     cards: [
       { kind: "photo", src: "/demo/photos/04.jpg", w: 1600, h: 1216, cap: "coffee, missing you", a: -17 },

@@ -42,8 +42,8 @@
   /* ── Linen postcard colours (fills) + "-ink" partners for text on paper ── */
   --accent-terracotta: #f07a5a; /* sunset coral. Fill: --ink on it 5.6:1 */
   --accent-terracotta-ink: #b5432a; /* 5.1:1 on --paper */
-  --accent-dusty-blue: #a8dce2; /* pale turquoise sky. --ink on it 10.2:1 */
-  --accent-dusty-blue-ink: #1e6f7d; /* 5.3:1 on --paper */
+  --accent-dusty-blue: #b7c5d6; /* pale dusty blue (D-082: no cyan). --ink on it 9.5:1 */
+  --accent-dusty-blue-ink: #3b5878; /* 6.7:1 on --paper */
   --accent-sage: #b5dbb0; /* palm-leaf green. --ink on it 10:1 */
   --accent-sage-ink: #2e6a40; /* 6:1 on --paper */
   --accent-rose: #f3a9b9; /* postcard pink. --ink on it 8.1:1 */
@@ -52,18 +52,18 @@
   --accent-red-ink: #93341f; /* 7:1 on --paper */
   --accent-ochre: #f0b437; /* mustard sun. --ink on it 8.2:1 */
   --accent-ochre-ink: #7a560a; /* 6.1:1 on --paper */
-  --accent-cobalt: #1e6f7d; /* deep turquoise sea: colour bands, the reveal stage. --paper text 5.3:1 */
-  --accent-cobalt-deep: #134e5a; /* --paper text 8.6:1 */
+  --accent-cobalt: #2f4a68; /* muted dark blue sea: colour bands, the reveal stage. --paper text 8.4:1 */
+  --accent-cobalt-deep: #233a52; /* --paper text 11:1 */
   --accent-vermilion: #f07a5a; /* bright coral, decorative */
-  --accent-lilac: #a8dce2; /* kept for older names: pale turquoise */
+  --accent-lilac: #b7c5d6; /* kept for older names: pale dusty blue */
   --accent-navy: #213a63; /* block-letter extrusions, postmarks, strong outlines. --paper text 10.5:1 */
-  --accent-sky: #2fa3b5; /* linen-postcard sky. --ink on it 5.1:1 */
+  --accent-sky: #3b5878; /* muted dark blue sky (D-082). --paper text on it 6.7:1 */
   --accent-palm: #4e9a63; /* decorative */
 
   /* ── Gradients ─────────────────────────────────────────── */
-  --grad-sky: linear-gradient(180deg, #2a9eb0 0%, #34a8b9 30%, #8fd0d8 72%, #f6e7c8 100%); /* top ≥ 4.5:1 with --ink, for the header that floats over it */
+  --grad-sky: linear-gradient(180deg, #314c6b 0%, #3b5878 45%, #47637f 80%, #56718d 100%); /* muted dark blue, deepening upward; --paper text ≥ 5:1 down to 80% */
   --grad-sunset: linear-gradient(180deg, #f6c46a 0%, #f39a63 52%, #ee7b5c 100%);
-  --grad-sea: linear-gradient(180deg, #1e6f7d 0%, #134e5a 100%);
+  --grad-sea: linear-gradient(180deg, #2f4a68 0%, #233a52 100%);
   /* Accent words inside headlines (kept for older screens): coral → navy */
   --grad-word: linear-gradient(100deg, var(--accent-red) 0%, var(--accent-navy) 100%);
   --grad-word-light: linear-gradient(100deg, var(--accent-ochre) 0%, var(--accent-rose) 100%);
@@ -92,13 +92,17 @@
   --admin-ink-soft: #574739; /* 8:1 on --admin-surface */
 
   /* ── Focus ─────────────────────────────────────────────── */
-  --focus-ring: #1e6f7d;
+  --focus-ring: #3b5878;
 
   /* ── Typography (families wired by next/font in app/fonts.ts) ── */
   --ff-display: var(--font-bowlby), "Arial Black", Impact, sans-serif; /* large-letter block capitals */
-  --ff-script: var(--font-grand-hotel), "Brush Script MT", cursive; /* "Greetings from…" */
+  /* three faces (D-082): display, hand, UI. The script accents use the hand; labels use the UI face. */
+  --ff-script: var(--font-nanum-pen), "Bradley Hand", "Segoe Print", cursive; /* "Greetings from…" */
   --ff-hand: var(--font-nanum-pen), "Bradley Hand", "Segoe Print", cursive;
-  --ff-postal: var(--font-courier-prime), "Courier New", ui-monospace, monospace;
+  /* The script accents were sized for Grand Hotel (capitals 0.68 of the em); Nanum Pen draws them at
+   * 0.56, so they are scaled to match (D-082). Layout (line boxes) is unchanged. */
+  --fsa-script: cap-height 0.68;
+  --ff-postal: var(--font-karla), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; /* labels: tracked caps */
   --ff-ui: var(--font-karla), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --ff-hand-fallback: var(--ff-ui);
   --ff-marker-fallback: var(--ff-postal);

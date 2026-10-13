@@ -17,7 +17,7 @@ export function MailLoop({ className }: { className?: string }) {
         <circle r="15" fill="none" stroke="var(--accent-red)" strokeWidth="1.2" strokeDasharray="2 3" />
         <path d="M0 6c-3.4-3-8-6-8-10.2 0-2.6 2-4.4 4.2-4.4 1.6 0 2.9.9 3.8 2.3.9-1.4 2.2-2.3 3.8-2.3 2.2 0 4.2 1.8 4.2 4.4C8 0 3.4 3 0 6z" fill="var(--accent-red)" />
       </g>
-      <text x="44" y="254" textAnchor="middle" fill="var(--accent-navy)" style={{ fontFamily: "var(--ff-script)", fontSize: 22 }}>
+      <text x="44" y="254" textAnchor="middle" fill="var(--accent-navy)" style={{ fontFamily: "var(--ff-script)", fontSizeAdjust: "var(--fsa-script)", fontSize: 22 }}>
         Saudade
       </text>
 
@@ -25,7 +25,7 @@ export function MailLoop({ className }: { className?: string }) {
       <g transform="translate(318 50)">
         <path d="M0 22c-9-8-20-15-20-25.5 0-6.5 5-11 10.5-11 4 0 7.3 2.2 9.5 5.8 2.2-3.6 5.5-5.8 9.5-5.8C15 -14.5 20 -10 20 -3.5 20 7 9 14 0 22z" fill="var(--accent-red)" stroke="var(--accent-navy)" strokeWidth="2.5" strokeLinejoin="round" />
       </g>
-      <text x="318" y="98" textAnchor="middle" fill="var(--accent-navy)" style={{ fontFamily: "var(--ff-script)", fontSize: 24 }}>
+      <text x="318" y="98" textAnchor="middle" fill="var(--accent-navy)" style={{ fontFamily: "var(--ff-script)", fontSizeAdjust: "var(--fsa-script)", fontSize: 24 }}>
         you
       </text>
 

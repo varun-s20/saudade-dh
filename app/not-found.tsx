@@ -18,13 +18,13 @@ const PHOTOS = ["/demo/photos/05.jpg", "/demo/photos/01.jpg", "/demo/photos/03.j
  */
 export default function NotFound() {
   return (
-    <PublicShell>
+    <PublicShell headTone="light">
       <section aria-labelledby="nf-title" className="ix-404 band-sky">
         <span aria-hidden className="hm-hero__sun" />
         <Biplane banner="Return to sender · no such address" />
         <div className="wrap ix-404__inner">
           <h1 id="nf-title">
-            <span className="script block text-script text-navy">Greetings from nowhere,</span>
+            <span className="script block text-script text-paper-raised">Greetings from nowhere,</span>
             <span className="sr-only">Page not found (404)</span>
             <span aria-hidden className="ix-404__ll">
               <LargeLetters word="404" photos={PHOTOS} delay={150} />
@@ -33,7 +33,7 @@ export default function NotFound() {
               </span>
             </span>
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-lede font-medium text-ink">
+          <p className="mx-auto mt-6 max-w-xl text-lede font-medium text-paper/90">
             The address may have a typo, or the page has moved. If you tapped an envelope and landed here, try holding your phone to the heart again.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

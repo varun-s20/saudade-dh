@@ -316,6 +316,7 @@
   .rk__hint {
     margin-top: 0.6rem;
     font-family: var(--ff-script);
+    font-size-adjust: var(--fsa-script);
     font-size: 1.5rem;
     line-height: 1;
   }

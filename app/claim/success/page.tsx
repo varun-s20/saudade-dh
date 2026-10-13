@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Your envelope is yours" };
 /** S3: after a successful claim. Reads ?t= with useSearchParams, so it sits inside Suspense. */
 export default function ClaimSuccessPage() {
   return (
-    <PublicShell>
+    <PublicShell headTone="light">
       <Suspense
         fallback={
           <div className="grid min-h-[50dvh] place-items-center">

@@ -15,7 +15,7 @@ export function LegalDocument({ title, intro, sections }: { title: string; intro
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
   return (
-    <PublicShell>
+    <PublicShell headTone="light">
       <PageMasthead
         tone="sky"
         eyebrow={`${site.name} · The fine print`}

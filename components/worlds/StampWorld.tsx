@@ -39,15 +39,19 @@ export interface StampWorldProps {
   kind: StampKind;
   env: RecipientEnvelope;
   fromName: string | null;
+  /** Write the letter out as it opens (its first reading on this device). */
+  typeLetter?: boolean;
+  /** The letter has been written out (or the reader skipped ahead). */
+  onLetterTyped?: () => void;
 }
 
-export function StampWorld({ kind, env, fromName }: StampWorldProps) {
+export function StampWorld({ kind, env, fromName, typeLetter, onLetterTyped }: StampWorldProps) {
   const c = env.contents;
   switch (kind) {
     case "photos":
       return c.photos ? <PhotosWorld photos={c.photos.content} fromName={fromName} /> : <Gone />;
     case "letter":
-      return c.letter ? <LetterWorld letter={c.letter.content} writtenAt={c.letter.updatedAt} /> : <Gone />;
+      return c.letter ? <LetterWorld letter={c.letter.content} writtenAt={c.letter.updatedAt} typeOut={typeLetter} onTyped={onLetterTyped} /> : <Gone />;
     case "voice":
       return c.voice ? <VoiceWorld voice={c.voice.content} fromName={fromName} /> : <Gone />;
     case "song":
