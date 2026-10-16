@@ -88,31 +88,6 @@ export const ndefBytes = (url) => url.replace(/^https:\/\//, "").length + 8;
 
 // ─── Test helpers (api-smoke, e2e-api) ───────────────────────────────────────
 
-function base32Decode(s) {
-  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  let bits = 0;
-  let value = 0;
-  const out = [];
-  for (const ch of s.toUpperCase().replace(/[\s=]+/g, "")) {
-    value = (value << 5) | A.indexOf(ch);
-    bits += 5;
-    if (bits >= 8) {
-      out.push((value >>> (bits - 8)) & 255);
-      bits -= 8;
-    }
-  }
-  return Buffer.from(out);
-}
-
-/** The RFC 6238 code an authenticator app would show now (+ offsetSteps × 30 s). */
-export function totp(secretB32, offsetSteps = 0) {
-  const msg = Buffer.alloc(8);
-  msg.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000) + offsetSteps));
-  const h = createHmac("sha1", base32Decode(secretB32)).update(msg).digest();
-  const o = h[h.length - 1] & 15;
-  return String((((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3]) % 1e6).padStart(6, "0");
-}
-
 /** A throwaway admin straight in the database (tests only); disable it with the returned function. */
 export async function tempAdmin(sql, tag) {
   const password = newPassword();

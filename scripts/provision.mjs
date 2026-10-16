@@ -11,14 +11,16 @@
  *   … --out <dir>             where to write the files (default ./provision-out, git-ignored)
  *   … --allow-placeholder     allow the placeholder chip domain (staging tests only)
  *
- * It reads NEXT_PUBLIC_CHIP_DOMAIN and NEXT_PUBLIC_CODE_LENGTH from the env file: they must match
- * the production build, or the claim page and the cards will disagree.
+ * It reads NEXT_PUBLIC_CHIP_DOMAIN from the env file: it must match the production build, or the
+ * chips will open a different site from the one the cards point to.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { codeBody, codeHash, connect, fail, formatCode, loadEnv, ndefBytes, parseArgs, randomString, B32, requireEnv, toCsv, unitNo } from "./lib/ops-common.mjs";
 
 const PLACEHOLDER = "saudade.example";
+/** Characters after "SAUD-": the agreed format, SAUD-3K7M (config/site.ts). */
+const CODE_LENGTH = 4;
 const args = parseArgs();
 const envFile = loadEnv(args["env-file"]);
 requireEnv("DATABASE_URL", "CODE_PEPPER_V1");
@@ -28,7 +30,6 @@ if (!Number.isInteger(count) || count < 1 || count > 5000) fail("--count must be
 const label = String(args.label ?? "").trim().slice(0, 80);
 if (!label) fail('--label is required, e.g. --label "Launch run".');
 const domain = (process.env.NEXT_PUBLIC_CHIP_DOMAIN?.trim().toLowerCase() || PLACEHOLDER);
-const codeLength = process.env.NEXT_PUBLIC_CODE_LENGTH?.trim() === "8" ? 8 : 4;
 if (domain === PLACEHOLDER && !args["allow-placeholder"]) fail(`NEXT_PUBLIC_CHIP_DOMAIN is unset (placeholder ${PLACEHOLDER}). Chips are permanent: set the real domain (O2).`);
 if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(domain)) fail(`"${domain}" is not a valid domain.`);
 const outDir = path.resolve(String(args.out ?? "provision-out"));
@@ -39,7 +40,7 @@ const sampleUrl = `https://${domain}/t/${"a".repeat(12)}`;
 console.log(`Env file      ${path.basename(envFile)}`);
 console.log(`Batch         "${label}", ${count} units`);
 console.log(`Chip URLs     https://${domain}/t/<12 characters>  (${ndefBytes(sampleUrl)} of 144 NTAG213 bytes)`);
-console.log(`Codes         ${formatCode("X".repeat(codeLength))}${codeLength === 4 ? "   ! 4 characters: we recommend 8 for production (O9)" : ""}`);
+console.log(`Codes         ${formatCode("X".repeat(CODE_LENGTH))}`);
 console.log(`Files         ${outDir}`);
 if (!args.yes) {
   console.log("\nDry run: nothing was changed. Re-run with --yes to generate.");
@@ -50,14 +51,14 @@ const sql = connect();
 try {
   const rows = await sql.begin(async (t) => {
     const [b] = await t`
-      insert into batches (label, unit_count, code_length, chip_domain) values (${label}, ${count}, ${codeLength}, ${domain}) returning id`;
+      insert into batches (label, unit_count, code_length, chip_domain) values (${label}, ${count}, ${CODE_LENGTH}, ${domain}) returning id`;
     const made = [];
     for (let round = 0; made.length < count && round < 10; round++) {
       const missing = count - made.length;
       for (let done = 0; done < missing; ) {
         const n = Math.min(500, missing - done);
         const draft = Array.from({ length: n }, () => {
-          const body = codeBody(codeLength);
+          const body = codeBody(CODE_LENGTH);
           return { body, slug: randomString(B32, 12) };
         });
         const inserted = await t`
@@ -69,7 +70,7 @@ try {
       }
     }
     if (made.length !== count) throw new Error("batch generation kept colliding");
-    await t`insert into audit_log (action, actor, detail) values ('batch.generated', 'system', ${t.json({ text: `${label}: ${count} units, ${codeLength}-char codes, ${domain} (CLI)` })})`;
+    await t`insert into audit_log (action, actor, detail) values ('batch.generated', 'system', ${t.json({ text: `${label}: ${count} units, ${domain} (CLI)` })})`;
     return made.sort((a, z) => a.no - z.no);
   });
 

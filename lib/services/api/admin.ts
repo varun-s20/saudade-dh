@@ -11,7 +11,6 @@
  *     printed for that unit. Path B units never ship with a card, so nothing is lost.
  */
 import type {
-  AdminSecurity,
   AdminService,
   AdminSession,
   AdminStats,
@@ -21,24 +20,19 @@ import type {
   ProvisionedRow,
   Readiness,
   StampKind,
-  TwoFactorSetup,
   UnitDetail,
   UnitListPage,
 } from "@/lib/services/types";
 import { fail, idempotencyKey, path, request } from "./http";
 
 export const apiAdminService: AdminService = {
-  /**
-   * `otp` is the TOTP second factor (or a recovery code). The server answers 401
-   * { detail: "otp_required" } when the password is right but the code is missing.
-   */
-  async signIn(email: string, password: string, otp?: string) {
+  async signIn(email: string, password: string) {
     if (!email.trim() || !password) return fail("unauthorized", { detail: "missing credentials" });
     return request<AdminSession>({
       method: "POST",
       path: "/api/admin/session",
       auth: "admin",
-      body: { email: email.trim().toLowerCase(), password, ...(otp?.trim() ? { otp: otp.trim() } : {}) },
+      body: { email: email.trim().toLowerCase(), password },
     });
   },
 
@@ -49,32 +43,6 @@ export const apiAdminService: AdminService = {
   async getSession() {
     const res = await request<AdminSession>({ path: "/api/admin/session", auth: "admin" });
     return res.ok ? res.data : null;
-  },
-
-  getSecurity() {
-    return request<AdminSecurity>({ path: "/api/admin/2fa", auth: "admin" });
-  },
-
-  startTwoFactor() {
-    return request<TwoFactorSetup>({ method: "POST", path: "/api/admin/2fa/setup", auth: "admin" });
-  },
-
-  confirmTwoFactor(pending, code) {
-    return request<{ recoveryCodes: string[] }>({
-      method: "POST",
-      path: "/api/admin/2fa/confirm",
-      auth: "admin",
-      body: { pending, code: code.replace(/\s+/g, "") },
-    });
-  },
-
-  regenerateRecoveryCodes(code) {
-    return request<{ recoveryCodes: string[] }>({
-      method: "POST",
-      path: "/api/admin/2fa/recovery-codes",
-      auth: "admin",
-      body: { code: code.replace(/\s+/g, "") },
-    });
   },
 
   getReadiness() {

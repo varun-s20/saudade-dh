@@ -29,12 +29,18 @@ the PM to renumber).
 > Storage and its S3 endpoint, not R2; the CSP is two static policies (public, admin), not a nonce policy, and the
 > public one allows `'unsafe-eval'` for Spotify's iFrame API (D-085); cron is nightly on every plan, with
 > `/api/cron/jobs` optional on Vercel Pro; there is no `proxy.ts` and no upper-case `/T/` rewrite (D-086).
+>
+> **Update 2026-10-16 (DECISIONS D-089):** two recommendations below were not taken up. **Admin sign-in is email and
+> password** (no TOTP 2FA; AQ5 closed): lock-out, per-IP limits, short sessions, CSRF and the audit log remain.
+> **Activation codes are 4 characters**, the agreed `SAUD-3K7M` (O9 closed): §3.3 stays as the record of the
+> analysis, and the claim limits and breaker (§9.2) are what hold off guessing. Text below that describes TOTP or
+> 8-character codes is superseded.
 
 | # | Decision | Why |
 | --- | --- | --- |
 | A1 | **Next.js 16 on Vercel Pro**, Postgres on **Neon (Launch)** via Drizzle, media on **Cloudflare R2**, email via **Resend**, all in **client-owned accounts** | Agreed stack (CG §9). Vercel Hobby is "for personal, non-commercial use" [V], so Pro is required |
 | A2 | Chip URL `https://{client-domain}/t/{12-char base32 slug}`, one NDEF URI record, tag **locked** | Fits NTAG213 with 100+ bytes spare; provider domains never touch a chip |
-| A3 | **Activation code `SAUD-XXXX-XXXX` (8 chars) recommended over `SAUD-XXXX`** (O9) | 4 chars cannot survive realistic guessing at 300 units, let alone 3,000 (§3.3) |
+| A3 | ~~Activation code `SAUD-XXXX-XXXX` (8 chars) recommended over `SAUD-XXXX`~~ **Decided: `SAUD-XXXX`, the agreed format** (O9, D-089) | Guessing at scale is held off by the claim limits and breaker (§3.3, §9.2) |
 | A4 | Codes stored as **HMAC-SHA-256 with a server pepper**; plaintext exists once, at generation | A DB dump can't be brute-forced; codes can never be re-exported by design |
 | A5 | **No object versioning on R2** (it is unimplemented [V]) → versioning is done by the app: immutable keys, versioned DB rows, 90-day soft delete, R2 bucket lock, nightly copy to a versioned **Backblaze B2** bucket | Meets "file versioning" (CG §8) on infrastructure that doesn't offer it natively |
 | A6 | Media uploads go **browser → presigned PUT → R2**, never through a function (4.5 MB body limit [V]) | Speed, cost, no size ceiling issues |
@@ -42,7 +48,7 @@ the PM to renumber).
 | A8 | The first open is recorded **only by a client POST after the choreography**; GET has no side effects; sender-token and admin holders are excluded | Link-preview bots fetch from users' own phones (RESEARCH §4.9) |
 | A9 | Rate limits in two layers: **Vercel WAF** (per-IP floods) + **Postgres buckets** (business limits, global breaker) + **Turnstile** when the breaker trips | No extra provider; precise long windows the WAF can't do (max 10 min [V]) |
 | A10 | Backups: **Neon PITR (7 days)** + **nightly encrypted `pg_dump`** and **R2 → B2 copy** from a GitHub Action | "Daily backups" that survive the loss of any single provider account |
-| A11 | Admin auth: argon2id passwords + **TOTP 2FA [PROPOSED]**, server-side sessions, CSRF header | Admin can reset codes and read every envelope |
+| A11 | Admin auth: hashed passwords with lock-out, server-side sessions, CSRF header (TOTP 2FA not taken up, D-089) | Admin can reset codes and read every envelope |
 | A12 | Recipient route serves **neutral Open Graph** data; content is fetched client-side with `no-store` | Forwarded links and preview cards never leak names, photos or the song |
 
 **Findings that change earlier assumptions (please read):**
@@ -780,8 +786,7 @@ frame-ancestors 'none'; upgrade-insecure-requests
 
 - Accounts created by CLI only. Passwords ≥ 14 characters, checked against a breached-password list (k-anonymity
   range query), hashed with argon2id (`@node-rs/argon2`, m = 19 MiB, t = 2, p = 1).
-- **TOTP 2FA [PROPOSED, AQ5]:** RFC 6238, 6 digits, 30 s, ±1 step, replay blocked by `totp_last_used_step`;
-  10 single-use recovery codes (hashed). Enrolment on first sign-in; required for both admins.
+- No second factor (AQ5 not taken up, D-089): email and password only.
 - Session: 256-bit random id in `__Host-saudade_admin` (`Secure; HttpOnly; SameSite=Strict; Path=/`), hashed in
   `admin_sessions`, 12 h idle / 7 d absolute, revocable; re-auth for "generate batch" and "reset code".
 - Lockout and alerting per §9.2; every sign-in, failure and admin action lands in `audit_log`.
@@ -803,7 +808,6 @@ emails, codes, tokens, signed URLs or IPs (IP → HMAC). Sentry scrubs `authoriz
 | --- | --- | --- | --- |
 | `CODE_PEPPER_V1` (32 random bytes) | Vercel env, **production only** | Never casually; add V2 for new codes, keep V1 | Vault **and** sealed paper copy (loss = every unclaimed card dead) |
 | `DATABASE_URL` (pooled, login role ∈ `saudade_app`) | Vercel env per environment | Yearly / on staff change | Vault |
-| `TOTP_ENC_KEY` | Vercel env | Yearly with a re-encryption script | Vault |
 | `IP_HASH_KEY` | Vercel env | Any time (only breaks correlation) | Not needed |
 | `CRON_SECRET` | Vercel env | Yearly | Vault |
 | `R2_ACCESS_KEY_ID/SECRET` (bucket-scoped read/write) | Vercel env | Yearly | Vault |
@@ -1165,12 +1169,12 @@ be purged before 90 days), the daily song check, and the HEIC fallback (~3 days 
 
 | # | Question | Why | Recommended default |
 | --- | --- | --- | --- |
-| O9 | Code length: `SAUD-XXXX` or `SAUD-XXXX-XXXX`? | §3.3: 4 chars are guessable at any realistic rate limit | **`SAUD-XXXX-XXXX` for all production units** |
+| O9 | Code length: `SAUD-XXXX` or `SAUD-XXXX-XXXX`? | §3.3: 4 chars are guessable at any realistic rate limit | **Decided: `SAUD-XXXX`** (D-089) |
 | AQ1 | Who packs, and how is each code card matched to its ceramic? | A mismatch delivers a letter to a stranger | `unit_no` printed on card + base sticker; 100% tap check |
 | AQ2 | Card printer and lead time; variable-data printing from a CSV? | The ceremony date depends on it | Digital variable-data print; CSV delivered 22 Oct |
 | AQ3 | Sender address and email provider | Deliverability, branding | Resend; `letters@{domain}`; Postmark as fallback |
 | AQ4 | A shared mailbox that owns all accounts | Ownership survives staff changes | `tech@{domain}` with 2FA |
-| AQ5 | Approve TOTP 2FA for admin login [PROPOSED] | Admin can read and reset everything | Yes, required for both admins |
+| AQ5 | Approve TOTP 2FA for admin login [PROPOSED] | Admin can read and reset everything | **Closed: not taken up** (D-089) |
 | AQ6 | Approve Backblaze B2 as the off-provider backup (~$0–1/mo) | R2 has no versioning; one-provider backups are fragile | Yes |
 | AQ7 | Where are most customers (US/EU/other)? | Data region; R2 jurisdiction is fixed per bucket | US East unless mostly EU |
 | AQ8 | When the **sender** taps their own ceramic, play the reveal without consuming it? | Senders will test before gifting | Yes, plus a small "only you see this; it won't count" note |

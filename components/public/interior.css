@@ -432,14 +432,6 @@
     letter-spacing: 0.04em;
     color: var(--ink);
   }
-  /* SAUD-XXXX-XXXX: eight slots and a second dash, about 11.6em, so a smaller face and gap */
-  .ix-ticket__code[data-long] {
-    gap: 0.18em;
-    font-size: min(clamp(1.25rem, 0.95rem + 1.1vw, 1.65rem), 7.8cqi);
-  }
-  .ix-ticket__sep {
-    color: var(--ink);
-  }
   .ix-ticket__slot {
     display: inline-grid;
     place-items: center;

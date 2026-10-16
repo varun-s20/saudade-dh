@@ -4,8 +4,6 @@
  *   npm run admin -- list
  *   npm run admin -- add <email> [--name "Developer"]   prints a generated password, once
  *   npm run admin -- reset-password <email>             prints a new password; signs them out everywhere
- *   npm run admin -- reset-2fa <email>                  lost phone AND recovery codes: they set up a new
- *                                                       authenticator at their next sign-in
  *   npm run admin -- disable <email> | enable <email>
  *   … --env-file <file>                                  default .env.local
  *
@@ -17,7 +15,7 @@ const args = parseArgs();
 loadEnv(args["env-file"]);
 const [command, rawEmail] = args._;
 const email = rawEmail?.trim().toLowerCase();
-const COMMANDS = ["list", "add", "reset-password", "reset-2fa", "disable", "enable"];
+const COMMANDS = ["list", "add", "reset-password", "disable", "enable"];
 if (!COMMANDS.includes(command)) fail(`Usage: npm run admin -- <${COMMANDS.join("|")}> [email]`);
 if (command !== "list" && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email ?? "")) fail("Give the admin's email address.");
 
@@ -28,13 +26,12 @@ const revokeSessions = (id) => sql`update admin_sessions set revoked_at = now() 
 try {
   if (command === "list") {
     const rows = await sql`
-      select email::text as email, display_name, (totp_enrolled_at is not null) as twofa,
-             coalesce(array_length(recovery_code_hashes, 1), 0) as codes, last_sign_in_at, disabled_at, locked_until
+      select email::text as email, display_name, last_sign_in_at, disabled_at, locked_until
       from admin_users order by created_at`;
     if (!rows.length) console.log("No admins yet: npm run admin -- add <email>");
     for (const r of rows) {
       const state = r.disabled_at ? "DISABLED" : r.locked_until && r.locked_until > new Date() ? "locked" : "active";
-      console.log(`${r.email.padEnd(36)} ${state.padEnd(8)} 2FA ${r.twofa ? `on (${r.codes} codes left)` : "not set up"}  last sign-in ${r.last_sign_in_at?.toISOString().slice(0, 16) ?? "never"}`);
+      console.log(`${r.email.padEnd(36)} ${state.padEnd(8)} last sign-in ${r.last_sign_in_at?.toISOString().slice(0, 16) ?? "never"}`);
     }
   } else if (command === "add") {
     const password = newPassword();
@@ -43,7 +40,7 @@ try {
       on conflict (email) do nothing returning id`;
     if (!row) fail(`${email} is already an admin (use reset-password).`);
     await logged("admin.created", row.id, email);
-    console.log(`✓ Admin ${email} created.\n  Password: ${password}\n  Hand it over in person or through the password manager, never by email. They'll set up two-factor sign-in at first sign-in (when TOTP_ENC_KEY is set).`);
+    console.log(`✓ Admin ${email} created.\n  Password: ${password}\n  Hand it over in person or through the password manager, never by email.`);
   } else {
     const [admin] = await sql`select id from admin_users where email = ${email}`;
     if (!admin) fail(`No admin with the email ${email}.`);
@@ -53,11 +50,6 @@ try {
       await revokeSessions(admin.id);
       await logged("admin.password_reset", admin.id, email);
       console.log(`✓ New password for ${email}: ${password}\n  Every session of theirs was signed out.`);
-    } else if (command === "reset-2fa") {
-      await sql`update admin_users set totp_secret_enc = null, totp_enrolled_at = null, totp_last_used_step = null, recovery_code_hashes = '{}' where id = ${admin.id}`;
-      await revokeSessions(admin.id);
-      await logged("admin.two_factor_reset", admin.id, email);
-      console.log(`✓ Two-factor sign-in reset for ${email}. At their next sign-in (password only) they set up a new authenticator before anything else.`);
     } else if (command === "disable") {
       await sql`update admin_users set disabled_at = now() where id = ${admin.id}`;
       await revokeSessions(admin.id);

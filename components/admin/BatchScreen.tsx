@@ -10,7 +10,7 @@ import { dataSource, services } from "@/lib/services";
 import type { Batch, BatchStatus, ProvisionedRow, ServiceError, ServiceErrorCode } from "@/lib/services/types";
 import { toast } from "@/lib/state/toast";
 import { cn } from "@/lib/utils/cn";
-import { dateTime, plural } from "@/lib/utils/format";
+import { dateTime } from "@/lib/utils/format";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { batchFilename, cardsCsv, downloadText, factoryCsv } from "./csv";
 import { loadErrorText, useUnauthorizedRedirect } from "./DashboardScreen";
@@ -120,13 +120,10 @@ export function BatchScreen() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">
         <div className="min-w-0 space-y-6">
           <Card title="Generate a batch" description="Each unit gets an activation code, an NFC slug, and the exact URL for its chip.">
-            {(placeholderDomain || site.codes.length === 4) && dataSource === "api" && (
+            {placeholderDomain && dataSource === "api" && (
               <div role="note" className="mb-4 rounded-soft border-2 border-ochre bg-ochre/15 px-4 py-3 text-sm text-admin-ink">
                 <p className="font-semibold">Not ready for the launch batch yet</p>
-                <ul className="mt-1 list-disc space-y-0.5 pl-5">
-                  {placeholderDomain && <li>The chip domain is still the placeholder {PLACEHOLDER_CHIP_DOMAIN}: batches made now are for testing only and must never be encoded.</li>}
-                  {site.codes.length === 4 && <li>Codes are 4 characters (SAUD-XXXX). We recommend 8 for every production unit (O9).</li>}
-                </ul>
+                <p className="mt-1">The chip domain is still the placeholder {PLACEHOLDER_CHIP_DOMAIN}: batches made now are for testing only and must never be encoded.</p>
                 <p className="mt-1 text-xs text-admin-ink-soft">See the launch checklist on the dashboard.</p>
               </div>
             )}
@@ -187,7 +184,7 @@ export function BatchScreen() {
                           </span>
                         </p>
                         <p className="text-xs text-admin-ink-soft">
-                          {b.count.toLocaleString()} {plural(b.count, "unit")} · {b.claimedCount.toLocaleString()} claimed · {b.codeLength}-character codes ·{" "}
+                          {b.count.toLocaleString()} {b.count === 1 ? "unit" : "units"} · {b.claimedCount.toLocaleString()} claimed ·{" "}
                           {b.chipDomain}
                         </p>
                         <p className="text-xs text-admin-ink-soft">
@@ -234,7 +231,6 @@ export function BatchScreen() {
           <p>
             <strong className="font-medium text-admin-ink">Codes:</strong> {site.codes.prefix}- plus {site.codes.length} characters from{" "}
             {site.codes.alphabet.length} symbols (no 0, O, 1, I or L), about {entropyBits(site.codes.alphabet.length, site.codes.length)} bits.
-            {site.codes.length === 4 && " We recommend 8 characters for production (O9): set NEXT_PUBLIC_CODE_LENGTH=8."}
           </p>
           <p>
             <strong className="font-medium text-admin-ink">Two files, once.</strong> Codes are stored hashed, so the files with codes exist only at

@@ -5,7 +5,7 @@
 #   api     the real backend end to end: PostgreSQL 15 prepared like Supabase, the in-memory Storage
 #           stand-in (scripts/test/storage-stub.mjs), migrations, a production build with
 #           NEXT_PUBLIC_DATA_SOURCE=api, then scripts/api-smoke.mjs: claim, uploads and media
-#           normalisation, stamps, seal, reveal, admin with two-factor sign-in, batches, history,
+#           normalisation, stamps, seal, reveal, admin sign-in, batches, history,
 #           the scheduled jobs and the claim breaker with Turnstile's public test keys.
 #
 # No repository secrets are needed: every secret is generated for the run and thrown away.
@@ -88,7 +88,6 @@ jobs:
           SUPABASE_MEDIA_BUCKET=media
           CODE_PEPPER_V1=$(hex)
           IP_HASH_KEY=$(hex)
-          TOTP_ENC_KEY=$(hex)
           CRON_SECRET=$(openssl rand -base64 24 | tr -d '/+=')
           ADMIN_EMAIL=ci-admin@example.com
           ADMIN_PASSWORD=$(openssl rand -base64 18 | tr -d '/+=')

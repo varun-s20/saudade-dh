@@ -21,15 +21,12 @@ import { appendAudit, db, fail, latency, nowIso, ok, patchUnit, ready, statusAft
 /** Prototype-only credentials, shown on the login screen as a demo hint. */
 export const DEMO_ADMIN = { email: "zeya@saudade.example", password: "postmark" } as const;
 
-/** Two-factor sign-in, version history and the full launch checklist live on the real backend. */
+/** Version history and the full launch checklist live on the real backend. */
 const BACKEND_ONLY = { detail: "Available with the real backend (NEXT_PUBLIC_DATA_SOURCE=api)" };
 
 function signedIn(): boolean {
   return Boolean(db().admin);
 }
-
-/** Sessions saved by an older prototype build have no twoFactor field. */
-const asSession = (s: AdminSession | null): AdminSession | null => (s ? { ...s, twoFactor: s.twoFactor ?? "off" } : null);
 
 /** Batches saved by an older prototype build lack the lifecycle fields. */
 function asBatch(b: Batch): Batch {
@@ -37,7 +34,6 @@ function asBatch(b: Batch): Batch {
   return {
     ...b,
     status: b.status ?? "generated",
-    codeLength: b.codeLength ?? site.codes.length,
     chipDomain: b.chipDomain ?? site.chipDomain,
     encodedAt: b.encodedAt ?? null,
     claimedCount: units.filter((u) => u.codeRedeemedAt || u.claimedAt).length,
@@ -70,7 +66,7 @@ export const adminService: AdminService = {
     await ready();
     await latency(1.2);
     if (email.trim().toLowerCase() !== DEMO_ADMIN.email || password !== DEMO_ADMIN.password) return fail("unauthorized");
-    const session: AdminSession = { email: DEMO_ADMIN.email, signedInAt: nowIso(), twoFactor: "off" };
+    const session: AdminSession = { email: DEMO_ADMIN.email, signedInAt: nowIso() };
     update(() => ({ admin: session }));
     appendAudit({ unitId: null, action: "admin.signed_in", actor: "admin", detail: session.email });
     return ok(session);
@@ -83,28 +79,7 @@ export const adminService: AdminService = {
 
   async getSession() {
     await ready();
-    return asSession(db().admin);
-  },
-
-  async getSecurity() {
-    await ready();
-    if (!signedIn()) return fail("unauthorized");
-    return ok({ twoFactor: "off", enrolledAt: null, recoveryCodesLeft: 0 });
-  },
-
-  async startTwoFactor() {
-    await ready();
-    return fail("invalid_input", BACKEND_ONLY);
-  },
-
-  async confirmTwoFactor() {
-    await ready();
-    return fail("invalid_input", BACKEND_ONLY);
-  },
-
-  async regenerateRecoveryCodes() {
-    await ready();
-    return fail("invalid_input", BACKEND_ONLY);
+    return db().admin;
   },
 
   async getReadiness() {
@@ -118,7 +93,7 @@ export const adminService: AdminService = {
           id: "prototype",
           label: "Prototype data",
           status: "warn",
-          detail: "This is the clickable prototype: everything lives in this browser. Email, backups, two-factor sign-in and the nightly jobs are checked on the real backend.",
+          detail: "This is the clickable prototype: everything lives in this browser. Email, backups and the nightly jobs are checked on the real backend.",
         },
         ...configChecks(),
       ],
@@ -316,7 +291,6 @@ export const adminService: AdminService = {
       createdAt: nowIso(),
       count: n,
       status: "generated",
-      codeLength: site.codes.length,
       chipDomain: site.chipDomain,
       encodedAt: null,
       claimedCount: 0,
@@ -341,7 +315,7 @@ export const adminService: AdminService = {
       rows.push({ unitNo, code, slug, url: recipientUrl(slug) });
     }
     update((s) => ({ units: { ...s.units, ...created }, batches: [batch, ...s.batches] }));
-    appendAudit({ unitId: null, action: "batch.generated", actor: "admin", detail: `${batch.label}: ${n} units, ${site.codes.length}-char codes` });
+    appendAudit({ unitId: null, action: "batch.generated", actor: "admin", detail: `${batch.label}: ${n} units` });
     return ok({ batch, rows });
   },
 

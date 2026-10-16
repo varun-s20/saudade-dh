@@ -10,7 +10,7 @@
 --   - Nothing a customer made is hard-deleted by the app: content rows are versioned, media is
 --     soft-deleted and purged by a job after the retention window (ARCHITECTURE.md §9).
 --   - Secrets are never stored in plaintext: activation codes as HMAC-SHA-256 (server pepper),
---     sender tokens and admin session ids as SHA-256, TOTP secrets AES-256-GCM encrypted.
+--     sender tokens and admin session ids as SHA-256.
 --   - audit_log is append-only (trigger). units are never deleted (no ON DELETE CASCADE).
 --
 -- Mapping to lib/services/types.ts: units ↔ Unit, contents ↔ ContentRecord, media ↔ MediaRecord,
@@ -65,28 +65,18 @@ create table admin_users (
   display_name          text check (char_length(display_name) <= 80),
   -- argon2id PHC string (OWASP: m=19 MiB, t=2, p=1 minimum).
   password_hash         text not null check (password_hash like '$argon2id$%'),
-  -- [PROPOSED 2FA] RFC 6238 TOTP secret, AES-256-GCM encrypted with TOTP_ENC_KEY (env, not DB):
-  -- 12-byte nonce || ciphertext || 16-byte tag. Null until the admin enrols.
-  totp_secret_enc       bytea check (totp_secret_enc is null or octet_length(totp_secret_enc) between 40 and 128),
-  totp_enrolled_at      timestamptz,
-  -- Highest 30 s time-step accepted so far: a code can never be replayed.
-  totp_last_used_step   bigint,
-  -- SHA-256 of single-use recovery codes (10 issued at enrolment).
-  recovery_code_hashes  bytea[] not null default '{}',
   failed_sign_ins       smallint not null default 0 check (failed_sign_ins >= 0),
   locked_until          timestamptz,
   last_sign_in_at       timestamptz,
   created_at            timestamptz not null default now(),
-  disabled_at           timestamptz,
-  constraint admin_users_totp_ck check ((totp_secret_enc is null) = (totp_enrolled_at is null))
+  disabled_at           timestamptz
 );
-comment on table admin_users is 'Zeya + developer. Created by CLI only (no sign-up). 2FA columns are [PROPOSED] pending client approval.';
+comment on table admin_users is 'Zeya + developer. Created by CLI only (no sign-up). Email and password sign-in (migration 0003).';
 
 create table admin_sessions (
   -- SHA-256 of the 256-bit random cookie value (__Host-saudade_admin). The raw id is never stored.
   id_hash        bytea primary key check (octet_length(id_hash) = 32),
   admin_id       uuid not null references admin_users (id),
-  mfa_verified   boolean not null,
   created_at     timestamptz not null default now(),
   last_seen_at   timestamptz not null default now(),
   -- 12 h idle / 7 d absolute; enforced in app, expires_at is the absolute cap.
@@ -105,7 +95,8 @@ create table batches (
   label         text not null check (char_length(label) between 1 and 80),
   status        batch_status not null default 'generated',
   unit_count    integer not null check (unit_count between 1 and 5000),
-  -- Characters after the SAUD- prefix (4 = SAUD-XXXX, 8 = SAUD-XXXX-XXXX). See O9.
+  -- Characters after the SAUD- prefix: 4, the agreed SAUD-XXXX (O9). The check also admits 8 for
+  -- rows made before the format was settled.
   code_length   smallint not null check (code_length in (4, 8)),
   -- The domain encoded on the chips of this batch (O2). Permanent once status = 'encoded'.
   chip_domain   text not null check (chip_domain ~ '^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$'),

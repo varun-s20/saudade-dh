@@ -30,7 +30,7 @@ of truth for the contract (the $1,000 offer; it supersedes the earlier proposal'
 | Requirement | Status | Where |
 | --- | --- | --- |
 | Unique code per unit, `SAUD-3K7M` style, case-insensitive, no 0/O 1/I/L | **Done** | `lib/parsing/codes.ts`, `components/forms/CodeInput.tsx` |
-| Code length for production | **Done · needs input (O9)**: 4 or 8 characters by one setting, `NEXT_PUBLIC_CODE_LENGTH`; both tested end to end. We recommend 8 | `config/site.ts` |
+| Code length | **Done**: 4 characters, the agreed `SAUD-3K7M` (O9). Guessing at scale is held off by the claim limits and the breaker (HANDOVER §10) | `config/site.ts` |
 | Codes never expire | **Done** | Claim has no expiry; reset mints a new code |
 | Path A: card in the box → claim → private link | **Done** | `/claim`, `app/api/claim` |
 | Path B: code emailed, no card in the box; admin sends manually | **Done · needs input** (O2 domain + Resend key to actually deliver) | Admin → unit → Email the code |
@@ -81,7 +81,7 @@ of truth for the contract (the $1,000 offer; it supersedes the earlier proposal'
 
 | Requirement | Status | Where |
 | --- | --- | --- |
-| Secure admin login | **Done**: password + authenticator app (two-factor, AQ5), lock-out, 12 h idle sessions, CSRF protection | `/admin`, Security page |
+| Secure admin login | **Done**: email and password, lock-out after 5 wrong passwords, 12 h idle sessions, CSRF protection, audit log | `/admin` |
 | Every unit with its status | **Done** | Dashboard, Units |
 | Search by code or email | **Done** (also unit number, slug) | Units |
 | Email codes manually (Path B) | **Done** | Unit → Email the code |
@@ -136,11 +136,9 @@ of truth for the contract (the $1,000 offer; it supersedes the earlier proposal'
 | # | What | Blocks | By |
 | --- | --- | --- | --- |
 | O2 / AQ12 | The chip domain, registered 10 years in Saudade's name | The launch batch, real email | ASAP (chips are permanent) |
-| O9 | 4- or 8-character codes | Printing the cards | Before the ceremony |
 | O3 / AQ2 | Encoding date; card printer and lead time | The ceremony date | — |
 | O4 | Stamp artwork (SVG or PNG) | The final look | — |
 | O14 | Privacy Policy and Terms wording | Launch | 7 Nov |
-| AQ5 | OK for two-factor admin sign-in (built; on with one setting) | — | — |
 | AQ6 | OK for Backblaze B2 off-site backups (~$0–1/month) | Backups | — |
 | AQ11 | 5 encoded sample ceramics in final glaze | Real-phone testing | 13 Nov |
 | Accounts | Vercel Pro, Supabase Pro, Resend, B2, GitHub org in Saudade's name | Production | — |
@@ -166,13 +164,13 @@ Server-rendering the envelope's contents is ruled out: it would let link-preview
 On a real recent phone on 4G the page is much faster than this worst-case profile; the real-device pass (AQ11)
 will give the true number.
 
-## 4. How this was verified (16 Oct)
+## 4. How this was verified (16 Oct, re-run after D-089)
 
 | Check | Result |
 | --- | --- |
-| `npm run lint`, `npm run typecheck`, `npm test` (35 unit tests) | Clean, clean, 35/35 |
-| `scripts/api-smoke.mjs` (real API on PostgreSQL 15 + the Storage stand-in), 4- and 8-character builds | 94/94 each; 96/96 with the claim breaker and Turnstile |
-| `scripts/e2e-api.mjs` (browser journey, real API, CSP violations fail it), 4- and 8-character builds | Chromium 32/32 each, including enrolling an authenticator through the admin; WebKit 31/31 (the voice upload is skipped there: test WebKit can't play recorded audio; the real-iPhone pass covers it) |
-| `scripts/e2e.mjs` (prototype journey + accessibility) | 32/32 Chromium, 32/32 WebKit, 0 axe violations |
+| `npm run lint`, `npm run typecheck`, `npm test` (20 unit tests) | Clean, clean, 20/20 |
+| `scripts/api-smoke.mjs` (real API on PostgreSQL 15 + the Storage stand-in, migration 0003 applied) | 84/84, including password lock-out; 86/86 with the claim breaker and Turnstile |
+| `scripts/e2e-api.mjs` (browser journey, real API, CSP violations fail it) | Chromium 26/26, including admin sign-in, restore and batches; WebKit 25/25 (the voice upload is skipped there: test WebKit can't play recorded audio; the real-iPhone pass covers it) |
+| `scripts/e2e.mjs` (prototype journey + accessibility) | 64/64 across Chromium and WebKit, 0 axe violations |
 | Backup and restore drill (`BACKUPS.md`) | Backup → drill PASS; every tamper case fails or is refused |
 | Real phones with encoded ceramics | **Not yet** (AQ11) |

@@ -2,7 +2,7 @@
  * Site-wide configuration. Values marked [OPEN] or [PROPOSED] are waiting on the client;
  * see docs/OPEN_QUESTIONS.md. Change behaviour here, not in components.
  *
- * The four deployment-specific values below come from NEXT_PUBLIC_* build-time variables, so a
+ * The deployment-specific values below come from NEXT_PUBLIC_* build-time variables, so a
  * production build is configured in the host's settings (docs/HANDOVER.md §4) with no code change.
  * Next inlines them at build time; changing one means a rebuild. Unset, they keep the showcase
  * defaults, and the admin's launch checklist (/api/admin/readiness) flags each one still unset.
@@ -10,9 +10,6 @@
 
 /** The placeholder chip domain; the launch checklist refuses it for production batches. */
 export const PLACEHOLDER_CHIP_DOMAIN = "saudade.example";
-
-/** Characters after "SAUD-": 4 (the agreed example, SAUD-3K7M) or 8 (SAUD-3K7M-Q2XF). See O9. */
-const codeLength: 4 | 8 = process.env.NEXT_PUBLIC_CODE_LENGTH?.trim() === "8" ? 8 : 4;
 
 export const site = {
   name: "Saudade",
@@ -77,12 +74,8 @@ export const site = {
     prefix: "SAUD",
     /** Unambiguous alphabet: no 0/O, 1/I/L. 31 symbols. */
     alphabet: "23456789ABCDEFGHJKMNPQRSTUVWXYZ",
-    /**
-     * Characters after the prefix (NEXT_PUBLIC_CODE_LENGTH). 4 is the agreed example and what the
-     * demo data uses; 8 is recommended for every production unit (O9, ARCHITECTURE.md §3.3).
-     * One length per deployment: the claim page, batch generation and the server all follow it.
-     */
-    length: codeLength,
+    /** Characters after the prefix: 4, the agreed format (SAUD-3K7M). See O9. */
+    length: 4,
     ambiguous: "01OIL",
   },
 

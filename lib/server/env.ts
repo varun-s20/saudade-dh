@@ -18,11 +18,6 @@ function key32(name: string): Buffer {
   return Buffer.from(v, "hex");
 }
 
-/** Like key32, but the setting is optional: null when unset. */
-function optionalKey32(name: string): Buffer | null {
-  return process.env[name]?.trim() ? key32(name) : null;
-}
-
 const optional = (name: string): string | null => process.env[name]?.trim() || null;
 
 export const env = {
@@ -45,12 +40,6 @@ export const env = {
   emailFrom: () => process.env.EMAIL_FROM?.trim() || "Saudade <letters@saudade.example>",
   /** Optional: the public origin used in emailed links. Defaults to the request's own origin. */
   publicOrigin: () => process.env.PUBLIC_APP_ORIGIN?.trim().replace(/\/+$/, "") || null,
-  /**
-   * AES-256-GCM key for admin TOTP secrets (ARCHITECTURE.md §9.4). Setting it turns two-factor
-   * sign-in ON for every admin (each enrols an authenticator at their next sign-in). Escrow it:
-   * losing it means every admin re-enrols (scripts/admin-user.mjs reset-2fa).
-   */
-  totpKey: () => optionalKey32("TOTP_ENC_KEY"),
   /** Bearer secret Vercel Cron sends to /api/cron/*. Unset = the cron routes refuse every call. */
   cronSecret: () => optional("CRON_SECRET"),
   /** Cloudflare Turnstile secret (with NEXT_PUBLIC_TURNSTILE_SITE_KEY): the claim breaker's bot check. */

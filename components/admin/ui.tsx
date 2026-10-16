@@ -5,7 +5,7 @@
  * pages (CLIENT_GUIDE §6.6): paper-toned surfaces, hairline rules, clean type. Still on-brand.
  */
 import Link from "next/link";
-import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type Ref } from "react";
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { toast } from "@/lib/state/toast";
 import { cn } from "@/lib/utils/cn";
 
@@ -133,7 +133,7 @@ export function AdminInput({
   className,
   inputClassName,
   ...rest
-}: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: ReactNode; error?: string | null; inputClassName?: string; ref?: Ref<HTMLInputElement> }) {
+}: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: ReactNode; error?: string | null; inputClassName?: string }) {
   const inputId = id ?? `in-${rest.name ?? label.toLowerCase().replace(/\W+/g, "-")}`;
   const hintId = hint ? `${inputId}-hint` : undefined;
   const errId = error ? `${inputId}-err` : undefined;

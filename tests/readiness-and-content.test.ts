@@ -12,8 +12,7 @@ describe("launch checklist (build configuration)", () => {
     expect(byId.chip_domain.detail).toContain("NEXT_PUBLIC_CHIP_DOMAIN");
   });
 
-  it("flags 4-character codes, the showcase link, the support address and the legal placeholders", () => {
-    expect(byId.code_length.status).toBe("warn");
+  it("flags the showcase link, the support address and the legal placeholders", () => {
     expect(byId.showcase_link.status).toBe("warn");
     expect(byId.support_email.status).toBe("warn");
     expect(byId.legal.status).toBe("warn");

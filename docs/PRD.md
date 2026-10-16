@@ -248,7 +248,7 @@ link so I can fill my envelope.
 |---|---|---|
 | Domain (O2) / encoding date (O3) not confirmed | Chips encoded with wrong URL = permanent | PM chases in week 1; CSV generator ready; never encode a provider domain |
 | Stamp artwork late (O4) | Reveal page not final for launch | Asset map isolates art; placeholders are production-quality |
-| 4-char codes guessable at scale | Code hijack | Recommend `SAUD-XXXX-XXXX` for production (O9) + rate limiting |
+| 4-char codes guessable at scale | Code hijack | Per-IP and global claim limits, Turnstile breaker (agreed `SAUD-XXXX`, O9) |
 | Sender never seals | Recipient stuck on "still being written" | Prominent Seal prompt in portal; admin can seal; config flag if O7 rejected |
 | In-app browsers block mic | Sender can't record | Detect + "Open in Safari/Chrome" + upload alternative |
 | Link-preview bots burn the reveal | First moment lost | Reveal recorded client-side after animation only |

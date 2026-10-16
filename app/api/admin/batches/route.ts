@@ -56,7 +56,7 @@ export const POST = route(async (req) => {
     }
     if (missing > 0) throw new Error("batch generation kept colliding");
     rows.sort((a, b2) => a.unitNo.localeCompare(b2.unitNo));
-    await audit(t, { unitId: null, action: "batch.generated", actor: "admin", adminId, detail: `${name}: ${count} units, ${site.codes.length}-char codes, ${site.chipDomain}` });
+    await audit(t, { unitId: null, action: "batch.generated", actor: "admin", adminId, detail: `${name}: ${count} units, ${site.chipDomain}` });
     return { batch: (await batchById(t, b.id))!, rows };
   });
   return json(result, 201);

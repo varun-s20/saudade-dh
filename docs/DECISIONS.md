@@ -940,7 +940,7 @@ CLIENT_GUIDE requirement (`LAUNCH_READINESS.md`).
 - **Songs**: every saved track is recorded in `song_catalog`; the nightly check marks a track unavailable only on
   a definite provider "not found", never on an error. Envelopes merge `unavailable`; the song world already
   rendered it; the sender's editor now says so.
-- **Admin two-factor (AQ5)**: RFC 6238 TOTP, secrets AES-256-GCM sealed to their admin row with `TOTP_ENC_KEY`,
+- **Admin two-factor (AQ5)** *(removed the same day, D-089)*: RFC 6238 TOTP, secrets AES-256-GCM sealed to their admin row with `TOTP_ENC_KEY`,
   replay blocked by the last used step, 10 hashed single-use recovery codes, stateless enrolment (the secret only
   stored once a code proves it). On when `TOTP_ENC_KEY` is set: a first sign-in is held on Admin → Security until
   enrolled. Wrong codes count towards the same 5-strike lock as passwords. Lost phone and codes: CLI only.
@@ -949,7 +949,7 @@ CLIENT_GUIDE requirement (`LAUNCH_READINESS.md`).
   the hour). New error code `challenge_required`.
 - **Admin packing checks**: a reveal POST from a browser with an admin session is `admin_excluded` (the recipient
   client now sends cookies on that one call).
-- **Batches**: list shows every batch with status, claim count, code length and domain; **Mark encoded**
+- **Batches**: list shows every batch with status, claim count and domain; **Mark encoded**
   (permanent) and **Void** (only before encoding and before any claim; a void batch's codes are unknown codes).
   The factory CSV uses the domain recorded on the batch, never the current setting. Generation hands out two
   files: the card file (codes, for the printer) and the factory file (URLs + NDEF bytes); codes never go to the
@@ -960,12 +960,13 @@ CLIENT_GUIDE requirement (`LAUNCH_READINESS.md`).
 - **Launch checklist**: `GET /api/admin/readiness` on the dashboard; build-time items are shared with the
   prototype (`lib/readiness-config.ts`).
 - **Operator CLIs**: `npm run provision` (the ceremony from a terminal, dry run unless `--yes`, files mode 600)
-  and `npm run admin` (list / add / reset-password / reset-2fa / disable / enable, all audited).
+  and `npm run admin` (list / add / reset-password / disable / enable, all audited).
 - **Legal pages**: the wording now lives in `content/legal.ts`; a section with text renders it, an empty one keeps
   the placeholder. We still write none of it (O14).
 - Migration `0002_ops.sql`: `ops_runs` (last run of each scheduled task) and `media.original_deleted_at`. Additive.
 
 ### D-084 · Deployment settings come from the environment; the defaults keep today's demo working
+*(The code-length setting was removed by D-089: codes are always 4 characters.)*
 `NEXT_PUBLIC_CHIP_DOMAIN`, `NEXT_PUBLIC_CODE_LENGTH`, `NEXT_PUBLIC_SUPPORT_EMAIL` and
 `NEXT_PUBLIC_SHOW_RECIPIENT_LINK` replace hard-coded values, so production is configured on the host with no code
 change. Unset, each keeps its current value (placeholder domain, 4-character codes, showcase link on), so Zeya's
@@ -992,8 +993,6 @@ is final), `X-Frame-Options: DENY`, COOP, and `Referrer-Policy: no-referrer` on 
   URL exactly as in the factory file (lower case).
 - **No server-rendered envelope contents to speed up the recipient page**: link-preview bots would read letters
   (ARCHITECTURE §8). The speed budget is reported as not met, with the options (`LAUNCH_READINESS.md` §3).
-- **No automatic 2FA switch-on for staging**: `db:setup` doesn't generate `TOTP_ENC_KEY`, so Zeya isn't asked to
-  set up an authenticator on the demo without being told.
 
 ### D-087 · Off-site backups: what B2 keeps of deleted files
 The nightly media copy never deletes (a write-only key, Object Lock). So that it doesn't keep what the app deletes
@@ -1010,8 +1009,21 @@ stamps are removed from B2 by a quarterly step with the master key (`BACKUPS.md`
   Linux CI. Keep it at the version vite uses.
 - `scripts/test/storage-stub.mjs`: an in-memory Supabase Storage stand-in so CI runs the whole API against
   PostgreSQL 15 with no cloud account. `scripts/api-smoke.mjs` and `scripts/e2e-api.mjs` create throwaway admins
-  when they can reach the database, so 2FA is exercised on every run and runs repeat cleanly.
+  when they can reach the database, so runs repeat cleanly.
 - `scripts/perf.mjs --slug` measures a real envelope on the real backend.
+
+### D-089 · No two-factor sign-in; codes are always 4 characters
+The product owner reviewed what had been added beyond CLIENT_GUIDE and took two things back out:
+- **Two-factor admin sign-in** was our proposal (AQ5), not the client's ask. Admins sign in with email and password;
+  the lock-out (5 wrong passwords → 15 minutes), the per-IP limit (20 failures a day), 12 h idle sessions, the
+  CSRF header and the audit log stay. Removed: the Security page, `/api/admin/2fa/*`, `lib/server/totp.ts`,
+  `TOTP_ENC_KEY`, the `qrcode` dependency, `npm run admin -- reset-2fa`. Migration `0003_drop_admin_2fa.sql`
+  drops the TOTP and recovery-code columns and `admin_sessions.mfa_verified`.
+- **Activation codes are 4 characters** (`SAUD-3K7M`), as the client agreed (O9 closed). `NEXT_PUBLIC_CODE_LENGTH`,
+  the grouped 8-box input and the batch's code-length display are gone. Guessing at scale is held off by the claim
+  limits and the breaker (HANDOVER §10); ARCHITECTURE §3.3 keeps the analysis for the record. The
+  `batches.code_length` column stays (always 4 for new batches); its check still admits 8 so no existing row can
+  block the migration.
 
 ## Sender & recipient build + integration (2026-10-08)
 

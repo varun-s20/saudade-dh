@@ -23,15 +23,6 @@ export function configChecks(): ReadinessCheck[] {
   }
 
   add(
-    "code_length",
-    "Activation code length",
-    site.codes.length === 8 ? "ok" : "warn",
-    site.codes.length === 8
-      ? "SAUD-XXXX-XXXX: about 40 bits, safe from guessing at any realistic rate."
-      : "SAUD-XXXX (4 characters) can be guessed at scale (ARCHITECTURE.md §3.3). Set NEXT_PUBLIC_CODE_LENGTH=8 before printing the launch cards, once Saudade agrees (O9).",
-  );
-
-  add(
     "showcase_link",
     "Showcase-only link after sealing",
     site.showRecipientLinkAfterSeal ? "warn" : "ok",

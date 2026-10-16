@@ -19,7 +19,7 @@ npm run dev          # http://localhost:3000  (add ?demo=1 to any URL for the De
 npm run build && npm start
 npm run lint
 npm run typecheck
-npm test             # unit tests (vitest): codes, two-factor, media conversion, checklist, legal
+npm test             # unit tests (vitest): codes, media conversion, checklist, legal
 ```
 
 Node 24. No environment variables are needed for the prototype (mock data in the browser).
@@ -32,13 +32,13 @@ The same screens run on a real backend when `NEXT_PUBLIC_DATA_SOURCE=api`: Supab
 `npm run db:setup`). Checks: `npm run api:smoke`, `npm run api:e2e`.
 
 **Going live:** [`docs/HANDOVER.md`](docs/HANDOVER.md) (accounts, every environment variable, the go-live order,
-the provisioning ceremony, admins and two-factor sign-in, monitoring). What's done and what waits on Saudade:
+the provisioning ceremony, admins, monitoring). What's done and what waits on Saudade:
 [`docs/LAUNCH_READINESS.md`](docs/LAUNCH_READINESS.md). Backups: [`docs/BACKUPS.md`](docs/BACKUPS.md).
 
 | Command | What |
 |---|---|
 | `npm run provision -- --count 300 --label "Launch run" --env-file <file>` | The provisioning ceremony from a terminal (dry run unless `--yes`): card file + factory file |
-| `npm run admin -- list \| add \| reset-password \| reset-2fa \| disable \| enable` | Admin accounts (there is no sign-up page) |
+| `npm run admin -- list \| add \| reset-password \| disable \| enable` | Admin accounts (there is no sign-up page) |
 | `npm run storage:stub` | In-memory Supabase Storage stand-in, to run the whole API locally or in CI |
 
 CI (`.github/workflows/ci.yml`) runs lint, types, unit tests, a build, and the whole API on PostgreSQL 15 on every
@@ -69,8 +69,8 @@ Run against a running server (`npm run dev` → :3000, or `next start -p 3200` f
 |---|---|
 | `node scripts/e2e.mjs --base <url>` | The whole showcase journey in Chromium **and** WebKit (iPhone Safari proxy), first-open integrity against the mock DB, axe-core WCAG 2.2 AA at every step, console/page errors. Screenshots in `./.e2e/`. |
 | `node scripts/perf.mjs --base <url> [--state first\|repeat\|empty] [--fast] [--slug <slug>]` | Recipient route on slow 4G + 4× CPU, cold cache: LCP, CLS, JS before the envelope is interactive, fonts. `--slug` measures a real envelope on the real backend. |
-| `npm run api:smoke -- --base <url> [--env-file f] [--breaker]` | The whole real API (~94 checks), including two-factor sign-in, media conversion, history, batches and the nightly jobs. |
-| `npm run api:e2e -- --base <url> [--env-file f] [--engine webkit]` | The real-backend journey in a browser, including authenticator set-up in the admin. Fails on any CSP violation. |
+| `npm run api:smoke -- --base <url> [--env-file f] [--breaker]` | The whole real API (~80 checks), including admin sign-in, media conversion, history, batches and the nightly jobs. |
+| `npm run api:e2e -- --base <url> [--env-file f] [--engine webkit]` | The real-backend journey in a browser, including the admin (sign-in, restore, batches). Fails on any CSP violation. |
 | `node scripts/responsive.mjs --base <mock build> [--sizes phones\|tablets\|desktops] [--shots dir]` | Every route at 13 screen sizes (320 px phones to 2560 px monitors): sideways scroll, text off-screen or cut off, text colliding, text hidden under the header in the pinned scenes, touch targets under 44 px, text under 12 px on phones. Needs a mock build (`NEXT_PUBLIC_DATA_SOURCE=mock`). |
 | `python scripts/qa.py [routes…] --desktop` | Route sweep: axe violations, console errors, touch targets < 44 px. |
 | `python scripts/shot.py <route> out.png [--frames …]` | Screenshot or frame sequence of one route (for design review). |
@@ -100,7 +100,7 @@ config/
 content/
   legal.ts              Privacy Policy and Terms wording (supplied by Saudade, O14)
 lib/
-  server/               The backend: auth (+ two-factor), envelopes, media pipeline, jobs, cron, songs, readiness
+  server/               The backend: admin auth, envelopes, media pipeline, jobs, cron, songs, readiness
   services/             types.ts (contracts) · mock/ (prototype) · api/ (real backend)
   state/                Zustand stores: db (mock server), demo, device, toast, media-store
   parsing/              codes.ts (activation codes, slugs, tokens) · songs.ts (link parsing)
@@ -169,7 +169,7 @@ Zustand 5, idb-keyval, browser-image-compression.
     Don't clip stamp containers; use `overflow-x: clip` on the page instead.
 17. **Route handlers** (`app/api/**/route.ts`) must not export `runtime` or `dynamic`: Next 16.4
     rejects them under Cache Components. `maxDuration` is fine. Request-time APIs keep them dynamic.
-18. **Deployment values come from the environment** (`NEXT_PUBLIC_CHIP_DOMAIN`, `NEXT_PUBLIC_CODE_LENGTH`…, read in
+18. **Deployment values come from the environment** (`NEXT_PUBLIC_CHIP_DOMAIN`, `NEXT_PUBLIC_SUPPORT_EMAIL`…, read in
     `config/site.ts`), never hard-coded. Add a new one to `.env.example`, `docs/HANDOVER.md` §4 and, if it matters
     for launch, the checklist (`lib/readiness-config.ts` or `lib/server/readiness.ts`).
 19. **Third-party content needs the CSP** in `next.config.ts`: a new script, frame or image host must be added

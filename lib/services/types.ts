@@ -233,35 +233,9 @@ export interface RevealEvent {
 
 // ─── Admin ─────────────────────────────────────────────────────────────────
 
-/**
- * Two-factor state of an admin session (AQ5):
- *   off      — this deployment doesn't require 2FA (no TOTP_ENC_KEY); the password is enough.
- *   enrol    — signed in with the password; the panel stays locked until an authenticator is set up.
- *   verified — signed in with the password and a one-time code (or a recovery code).
- */
-export type AdminTwoFactor = "off" | "enrol" | "verified";
-
 export interface AdminSession {
   email: string;
   signedInAt: ISODate;
-  twoFactor: AdminTwoFactor;
-}
-
-/** Returned once when enrolment starts; `pending` goes back with the first code to confirm it. */
-export interface TwoFactorSetup {
-  /** Opaque, encrypted and short-lived: the secret is only stored once a code proves it works. */
-  pending: string;
-  /** Base32 secret, for typing in by hand. */
-  secret: string;
-  otpauthUrl: string;
-  /** PNG data URL of the otpauth QR code. */
-  qrDataUrl: string;
-}
-
-export interface AdminSecurity {
-  twoFactor: "off" | "enrolled" | "not_enrolled";
-  enrolledAt: ISODate | null;
-  recoveryCodesLeft: number;
 }
 
 export type AuditAction =
@@ -287,13 +261,9 @@ export type AuditAction =
   | "admin.signed_in"
   | "admin.signed_out"
   | "admin.sign_in_failed"
-  | "admin.two_factor_enrolled"
-  | "admin.recovery_codes_reset"
-  | "admin.recovery_code_used"
   // Written by scripts/admin-user.mjs (actor "system").
   | "admin.created"
   | "admin.password_reset"
-  | "admin.two_factor_reset"
   | "admin.disabled"
   | "admin.enabled"
   | "system.breaker_tripped";
@@ -378,8 +348,6 @@ export interface Batch {
   createdAt: ISODate;
   count: number;
   status: BatchStatus;
-  /** Characters after "SAUD-" in this batch's codes. */
-  codeLength: number;
   /** The domain written on this batch's chips; its factory CSV always uses this one. */
   chipDomain: string;
   encodedAt: ISODate | null;
@@ -484,21 +452,10 @@ export interface RevealService {
 }
 
 export interface AdminService {
-  /**
-   * `otp` = a 6-digit authenticator code or a recovery code. With 2FA on and an authenticator
-   * enrolled, a right password without it fails `unauthorized` with detail "otp_required".
-   */
-  signIn(email: string, password: string, otp?: string): Promise<ServiceResult<AdminSession>>;
+  signIn(email: string, password: string): Promise<ServiceResult<AdminSession>>;
   signOut(): Promise<void>;
   getSession(): Promise<AdminSession | null>;
-  getSecurity(): Promise<ServiceResult<AdminSecurity>>;
-  /** Start authenticator enrolment (also available to a session that is still `enrol`). */
-  startTwoFactor(): Promise<ServiceResult<TwoFactorSetup>>;
-  /** Prove the authenticator works; returns 10 single-use recovery codes, shown this once. */
-  confirmTwoFactor(pending: string, code: string): Promise<ServiceResult<{ recoveryCodes: string[] }>>;
-  /** Replace every recovery code (needs a current authenticator code). */
-  regenerateRecoveryCodes(code: string): Promise<ServiceResult<{ recoveryCodes: string[] }>>;
-  /** Settings that must be right before launch (chip domain, code length, email, 2FA, jobs…). */
+  /** Settings that must be right before launch (chip domain, email, nightly jobs…). */
   getReadiness(): Promise<ServiceResult<Readiness>>;
   getStats(): Promise<ServiceResult<AdminStats>>;
   listUnits(query: UnitListQuery): Promise<ServiceResult<UnitListPage>>;

@@ -22,7 +22,7 @@ One Next.js app (TypeScript) with three front doors, one database and one privat
 | --- | --- | --- |
 | Claim and the sender's portal | `/claim`, then the private link `/s/{token}` | The buyer. No account. |
 | The recipient's envelope | `/t/{slug}`, the address on the NFC chip | Whoever taps the ceramic. No login. |
-| Admin | `/admin` | Zeya and the developer. Password + authenticator app. |
+| Admin | `/admin` | Zeya and the developer. Email and password. |
 
 | Part | Service | Notes |
 | --- | --- | --- |
@@ -70,7 +70,7 @@ developer is invited as a member and removed when support ends. Nothing is bille
    is encoded.
 5. **Resend:** verify the domain (SPF, DKIM, DMARC), create a sending-only API key, set `RESEND_API_KEY` and
    `EMAIL_FROM`.
-6. Sign in at `/admin`, set up your authenticator (§8), and open the **launch checklist** on the dashboard. It
+6. Sign in at `/admin` (§8) and open the **launch checklist** on the dashboard. It
    checks the settings below live and says what to fix.
 
 Every push to `main` is checked by CI (`.github/workflows/ci.yml`: lint, types, unit tests, build, and the whole
@@ -86,7 +86,6 @@ API against a test database). Vercel deploys `main`; preview deployments get the
 | --- | --- | --- |
 | `NEXT_PUBLIC_DATA_SOURCE` | `api` | `mock` is the clickable prototype (data in the browser) |
 | `NEXT_PUBLIC_CHIP_DOMAIN` | **Yes** | The domain on every chip, e.g. `saudade.gift`. Permanent once chips are encoded. Each batch remembers the domain it was made with |
-| `NEXT_PUBLIC_CODE_LENGTH` | **Decide (O9)** | `4` (SAUD-3K7M) or `8` (SAUD-3K7M-Q2XF, recommended). Must be final before cards are printed |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | Yes | The help address shown on the pages |
 | `NEXT_PUBLIC_SHOW_RECIPIENT_LINK` | `0` | `1` shows senders the envelope's address after sealing (demos only) |
 | `SUPABASE_URL` | Yes | Supabase → Project settings → API |
@@ -95,7 +94,6 @@ API against a test database). Vercel deploys `main`; preview deployments get the
 | `SUPABASE_MEDIA_BUCKET` | Default `media` | The private bucket |
 | `CODE_PEPPER_V1` | Yes | 64 hex. **Escrow in two places**: losing it voids every unclaimed card |
 | `IP_HASH_KEY` | Yes | 64 hex. Keys IP addresses for rate limits; can be rotated any time |
-| `TOTP_ENC_KEY` | Yes | 64 hex. Turns on two-factor sign-in for every admin (§8). Escrow it |
 | `RESEND_API_KEY` | Yes | Without it, emails are logged in the admin but never sent |
 | `EMAIL_FROM` | Yes | e.g. `Saudade <letters@saudade.gift>`, on the verified domain |
 | `PUBLIC_APP_ORIGIN` | Yes | e.g. `https://saudade.gift`: the start of every emailed link |
@@ -113,15 +111,14 @@ Make a 64-hex secret with `node -e "console.log(require('crypto').randomBytes(32
 | # | Step | Owner |
 | --- | --- | --- |
 | 1 | Domain registered for 10 years with auto-renew and lock (O2) | Zeya |
-| 2 | Code length decided (O9) and `NEXT_PUBLIC_CODE_LENGTH` set | Zeya + developer |
-| 3 | Production deployed (§3) with every variable in §4; the launch checklist has no **Fix** left | Developer |
-| 4 | Privacy Policy and Terms wording pasted into `content/legal.ts` (O14, facts in §9) | Zeya's lawyer, developer |
-| 5 | Stamp artwork swapped in (`config/stamps.ts`, O4) | Developer |
-| 6 | Backups set up and one restore drill passed (`BACKUPS.md` §5) | Developer |
-| 7 | Provisioning ceremony (§7): card file to the printer, factory file to the encoding run | Developer + Zeya |
-| 8 | Factory confirms the chips are written and locked → Admin → Batches → **Mark encoded** | Zeya |
-| 9 | At least 5 encoded sample ceramics tapped on an iPhone and an Android (AQ11) | Zeya + developer |
-| 10 | Packing: card S-0042 with ceramic S-0042; each box tapped while signed in to the admin (it never uses up the first open) | Zeya |
+| 2 | Production deployed (§3) with every variable in §4; the launch checklist has no **Fix** left | Developer |
+| 3 | Privacy Policy and Terms wording pasted into `content/legal.ts` (O14, facts in §9) | Zeya's lawyer, developer |
+| 4 | Stamp artwork swapped in (`config/stamps.ts`, O4) | Developer |
+| 5 | Backups set up and one restore drill passed (`BACKUPS.md` §5) | Developer |
+| 6 | Provisioning ceremony (§7): card file to the printer, factory file to the encoding run | Developer + Zeya |
+| 7 | Factory confirms the chips are written and locked → Admin → Batches → **Mark encoded** | Zeya |
+| 8 | At least 5 encoded sample ceramics tapped on an iPhone and an Android (AQ11) | Zeya + developer |
+| 9 | Packing: card S-0042 with ceramic S-0042; each box tapped while signed in to the admin (it never uses up the first open) | Zeya |
 
 ---
 
@@ -164,7 +161,7 @@ A damaged card: Admin → unit → **Reset code**, and print one new card.
 
 ---
 
-## 8. Admins and two-factor sign-in
+## 8. Admins
 
 There is no sign-up page. Admins are managed from a terminal with the production env file:
 
@@ -172,13 +169,12 @@ There is no sign-up page. Admins are managed from a terminal with the production
 npm run admin -- list
 npm run admin -- add developer@example.com --name "Developer"     # prints a password, once
 npm run admin -- reset-password zeya@saudade.gift                 # prints a new one; signs them out everywhere
-npm run admin -- reset-2fa zeya@saudade.gift                      # lost phone AND recovery codes
 npm run admin -- disable developer@example.com                    # when support ends
 ```
 
-With `TOTP_ENC_KEY` set, every admin sets up an authenticator app (Google Authenticator, 1Password, Authy…) at
-their first sign-in, and gets ten single-use recovery codes. New phone: sign in with a recovery code, then
-`reset-2fa` and set up again. Five wrong passwords or codes lock an account for 15 minutes.
+Admins sign in with their email and password. Five wrong passwords lock an account for 15 minutes, and one
+network address gets 20 failed sign-ins a day. Every sign-in, failure and sign-out is in the audit log. Keep each
+password in the password manager; a forgotten one is replaced with `reset-password`.
 
 ---
 
@@ -210,7 +206,7 @@ the chip's link can open it (the accepted cost of "just tap", CLIENT_GUIDE §7).
 Claims are limited per network address (10 wrong codes in 15 minutes, 30 a day) and globally (300 wrong codes an
 hour). If the global limit trips, Turnstile turns on a quiet "are you a person" check for every claim for six
 hours, and the dashboard's activity shows it. Without Turnstile keys, claims instead pause until the hour is up.
-8-character codes (O9) make guessing hopeless whatever the limits; 4-character ones do not (ARCHITECTURE.md §3.3).
+These limits and the breaker are what protect the agreed 4-character codes (SAUD-3K7M, O9) from guessing at scale.
 
 ---
 
@@ -220,7 +216,7 @@ hours, and the dashboard's activity shows it. Without Turnstile keys, claims ins
 | --- | --- |
 | Is it up? | UptimeRobot on `https://{domain}/api/health` (answers `{"ok":true,"db":true,"version":…}`) and on the home page, alerting Zeya and the developer |
 | Domain and certificate expiry | UptimeRobot's domain/SSL monitor |
-| Nightly jobs, backups, email, 2FA, conversion | Admin → Dashboard → Launch checklist |
+| Nightly jobs, backups, email, conversion | Admin → Dashboard → Launch checklist |
 | Errors | Vercel → Logs. An unexpected server error is logged as `[api {id}]` with its stack, and the API's error response carries the same id (`"server error {id}"`), so a report can be matched to its log line |
 | Who did what | Admin → unit → Audit log; Dashboard → Recent activity |
 
@@ -230,9 +226,9 @@ hours, and the dashboard's activity shows it. Without Turnstile keys, claims ins
 
 | Command | What |
 | --- | --- |
-| `npm run lint`, `npm run typecheck`, `npm test` | Lint, types, unit tests (codes, TOTP, media conversion, checklist, legal) |
-| `npm run api:smoke -- --base <url> --env-file <file>` | 90+ checks of the whole API: claim, uploads and conversion, stamps, reveal rules, admin with 2FA, history, batches, cron, checklist. `--breaker` also trips the claim breaker (test databases only) |
-| `npm run api:e2e -- --base <url> --env-file <file>` | The same journey in a real browser, including enrolling an authenticator through the admin. Fails on any Content-Security-Policy violation |
+| `npm run lint`, `npm run typecheck`, `npm test` | Lint, types, unit tests (codes, media conversion, checklist, legal) |
+| `npm run api:smoke -- --base <url> --env-file <file>` | 80+ checks of the whole API: claim, uploads and conversion, stamps, reveal rules, admin sign-in, history, batches, cron, checklist. `--breaker` also trips the claim breaker (test databases only) |
+| `npm run api:e2e -- --base <url> --env-file <file>` | The same journey in a real browser, including the admin (sign-in, restore, batches). Fails on any Content-Security-Policy violation |
 | `node scripts/e2e.mjs --base <url>` | The prototype journey (mock data), Chromium and WebKit, with accessibility checks |
 
 To run the API locally with no Supabase at all: start `npm run storage:stub` (an in-memory Storage stand-in), point
@@ -246,7 +242,6 @@ To run the API locally with no Supabase at all: start `npm run storage:stub` (an
 | Secret | Escrow | Rotate |
 | --- | --- | --- |
 | `CODE_PEPPER_V1` | Password manager **and** a sealed paper copy | Never casually (it would void unclaimed cards) |
-| `TOTP_ENC_KEY` | Password manager | Yearly; every admin then runs set-up again (`reset-2fa`) |
 | `SUPABASE_SERVICE_ROLE_KEY`, database password | Password manager | Yearly and when someone leaves |
 | `RESEND_API_KEY`, `CRON_SECRET`, Turnstile secret | Password manager | Yearly |
 | `IP_HASH_KEY` | Not needed | Any time |

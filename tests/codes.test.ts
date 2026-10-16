@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { site } from "@/config/site";
-import { checkCode, codeBody, formatCode, generateCode, generateSlug, generateToken, normaliseCode, randomString } from "@/lib/parsing/codes";
+import { checkCode, codeBody, generateCode, generateSlug, generateToken, normaliseCode, randomString } from "@/lib/parsing/codes";
 import { ndefBytes, NTAG213_BYTES } from "@/lib/parsing/ndef";
 
-// The default build: 4-character codes (NEXT_PUBLIC_CODE_LENGTH unset).
 describe("activation codes", () => {
-  it("uses the agreed format by default", () => {
+  it("uses the agreed format, SAUD-XXXX", () => {
     expect(site.codes.length).toBe(4);
     expect(generateCode()).toMatch(/^SAUD-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}$/);
   });
@@ -22,11 +21,6 @@ describe("activation codes", () => {
     expect(checkCode("SAUD-3K7")).toMatchObject({ status: "incomplete" });
     expect(checkCode("SAUD-3K7M9")).toMatchObject({ status: "invalid_char" });
     expect(checkCode("")).toEqual({ status: "empty" });
-  });
-
-  it("formats 8-character bodies in two groups", () => {
-    expect(formatCode("3K7MQ2XF")).toBe("SAUD-3K7M-Q2XF");
-    expect(codeBody("saud-3k7m-q2xf")).toBe("3K7MQ2XF");
   });
 
   it("never generates a body that starts with the prefix", () => {

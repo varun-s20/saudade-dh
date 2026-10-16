@@ -13,9 +13,8 @@
  * recipient open → reveal (once) → admin tools, history and restore, batch lifecycle, the launch
  * checklist and the scheduled jobs. Every step is a PASS/FAIL line; exits non-zero on any failure.
  *
- * Admin sign-in: with DATABASE_URL available the script creates a throwaway admin for the run (so
- * two-factor sign-in can be enrolled and exercised every time) and disables it at the end;
- * otherwise it signs in as ADMIN_EMAIL / ADMIN_PASSWORD.
+ * Admin sign-in: with DATABASE_URL available the script creates a throwaway admin for the run and
+ * disables it at the end; otherwise it signs in as ADMIN_EMAIL / ADMIN_PASSWORD.
  */
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -23,7 +22,7 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
-import { connect, tempAdmin as makeTempAdmin, totp } from "./lib/ops-common.mjs";
+import { connect, tempAdmin as makeTempAdmin } from "./lib/ops-common.mjs";
 
 const require = createRequire(import.meta.url);
 const args = process.argv.slice(2);
@@ -99,7 +98,7 @@ try {
   const health = await call("GET", "/api/health");
   check("health: database reachable, version reported", health.status === 200 && health.data?.db === true && typeof health.data?.version === "string", JSON.stringify(health.data));
 
-  // ── Admin: sign in (and two-factor, when the deployment requires it) ─────
+  // ── Admin: sign in ───────────────────────────────────────────────────────
   const ADMIN = await adminCredentials();
   check(
     "admin: wrong password refused",
@@ -108,41 +107,7 @@ try {
   const signin = await call("POST", "/api/admin/session", { admin: true, body: ADMIN });
   check("admin: sign in", signin.status === 200 && signin.data?.email === ADMIN.email, `status ${signin.status}`);
 
-  if (signin.data?.twoFactor === "enrol") {
-    check("2fa: an un-enrolled session can't use the panel (403)", (await call("GET", "/api/admin/stats", { admin: true })).status === 403);
-    const sec = await call("GET", "/api/admin/2fa", { admin: true });
-    check("2fa: status says not enrolled", sec.data?.twoFactor === "not_enrolled");
-    const setup = await call("POST", "/api/admin/2fa/setup", { admin: true });
-    check("2fa: setup returns a secret, otpauth link and QR", setup.status === 200 && /^[A-Z2-7]{32}$/.test(setup.data?.secret ?? "") && setup.data?.qrDataUrl?.startsWith("data:image/png"));
-    check(
-      "2fa: a wrong first code is refused",
-      (await call("POST", "/api/admin/2fa/confirm", { admin: true, body: { pending: setup.data.pending, code: "000000" === totp(setup.data.secret) ? "111111" : "000000" } })).status === 400,
-    );
-    check(
-      "2fa: a tampered pending token is refused",
-      (await call("POST", "/api/admin/2fa/confirm", { admin: true, body: { pending: `${setup.data.pending.slice(0, -2)}AA`, code: totp(setup.data.secret) } })).status === 400,
-    );
-    const firstCode = totp(setup.data.secret);
-    const confirm = await call("POST", "/api/admin/2fa/confirm", { admin: true, body: { pending: setup.data.pending, code: firstCode } });
-    check("2fa: confirm → 10 recovery codes", confirm.status === 200 && confirm.data?.recoveryCodes?.length === 10);
-    check("2fa: …and this session now opens the panel", (await call("GET", "/api/admin/stats", { admin: true })).status === 200);
-    await call("DELETE", "/api/admin/session", { admin: true });
-    cookie = "";
-    const noOtp = await call("POST", "/api/admin/session", { admin: true, body: ADMIN });
-    check("2fa: right password without a code → 401 otp_required", noOtp.status === 401 && noOtp.data?.detail === "otp_required");
-    check("2fa: the enrolment code can't be replayed", (await call("POST", "/api/admin/session", { admin: true, body: { ...ADMIN, otp: firstCode } })).data?.detail === "invalid_otp");
-    const [rc] = confirm.data.recoveryCodes;
-    const viaRecovery = await call("POST", "/api/admin/session", { admin: true, body: { ...ADMIN, otp: rc.toUpperCase() } });
-    check("2fa: a recovery code signs in (any case)", viaRecovery.status === 200 && viaRecovery.data?.twoFactor === "verified");
-    const keepCookie = cookie;
-    check("2fa: …and only once", (await call("POST", "/api/admin/session", { admin: true, body: { ...ADMIN, otp: rc } })).data?.detail === "invalid_otp");
-    cookie = keepCookie;
-    check("2fa: recovery codes left = 9", (await call("GET", "/api/admin/2fa", { admin: true })).data?.recoveryCodesLeft === 9);
-    // Four strikes were spent above (wrong-first-code doesn't count); clear them so the lock-out never trips mid-run.
-    if (db) await db`update admin_users set failed_sign_ins = 0 where email = ${ADMIN.email}`;
-  } else {
-    check("2fa: off on this deployment (TOTP_ENC_KEY unset)", signin.data?.twoFactor === "off");
-  }
+  check("admin: session cookie opens the panel", (await call("GET", "/api/admin/stats", { admin: true })).status === 200);
 
   check(
     "admin: CSRF header required",
@@ -151,8 +116,8 @@ try {
   const batch = await call("POST", "/api/admin/batches", { admin: true, body: { count: 3, label: `Smoke ${new Date().toISOString().slice(0, 16)}` } });
   check("admin: generate batch of 3 (codes returned once)", batch.status === 201 && batch.data?.rows?.length === 3, `status ${batch.status}`);
   check(
-    "admin: the batch records its code length and chip domain",
-    batch.data?.batch?.status === "generated" && batch.data.batch.codeLength >= 4 && typeof batch.data.batch.chipDomain === "string",
+    "admin: the batch records its chip domain, with 4-character codes",
+    batch.data?.batch?.status === "generated" && typeof batch.data.batch.chipDomain === "string" && batch.data.rows?.every((r) => /^SAUD-[A-Z2-9]{4}$/.test(r.code)),
   );
   const [r1, r2, r3] = batch.data.rows;
 
@@ -401,6 +366,15 @@ try {
 
   check("admin: sign out", (await call("DELETE", "/api/admin/session", { admin: true })).status === 204);
   check("admin: …session gone", (await call("GET", "/api/admin/session", { admin: true })).status === 401);
+
+  // Lock-out, on the throwaway admin only (it would lock a real account), from its own test address so repeated
+  // runs never reach the 20-a-day limit per address.
+  if (tempAdmin) {
+    const headers = { "x-forwarded-for": `198.18.${randomBytes(1)[0]}.${randomBytes(1)[0]}` };
+    for (let i = 0; i < 5; i++) await call("POST", "/api/admin/session", { admin: true, body: { email: ADMIN.email, password: "definitely-wrong" }, headers });
+    const locked = await call("POST", "/api/admin/session", { admin: true, body: ADMIN, headers });
+    check("admin: 5 wrong passwords lock the account (the right one is refused too)", locked.status === 401 && locked.data?.detail === "locked");
+  }
 } catch (e) {
   failed++;
   console.log(`FAIL crashed: ${e instanceof Error ? e.stack : e}`);

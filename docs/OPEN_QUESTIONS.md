@@ -24,7 +24,7 @@ critical path** (21 Nov 2026), because the ceramics are made before the software
 
 | # | Question | Why it matters | Recommended default | In the prototype |
 |---|---|---|---|---|
-| **O9** ⏱ | **Code length:** keep the agreed `SAUD-3K7M` (4 characters), or use `SAUD-3K7M-Q2XF` (8)? | 4 characters = ~923,000 possible codes. With 300 unclaimed units, 100 devices making 50 guesses a day would take over *some* stranger's envelope within a day about 80% of the time; at 3,000 units even one device succeeds within a month. Stricter rate limits would start locking out real buyers. 8 characters cuts a year-long attack on 3,000 units to under 1%. Must be decided **before cards are printed**. | 8 characters (`SAUD-3K7M-Q2XF`) for every production unit, including the launch batch. Cost: about 4 more characters to type. Analysis: `ARCHITECTURE.md` §3.3. | Both built and tested end to end; one setting, `NEXT_PUBLIC_CODE_LENGTH=8`. The demo stays on 4. |
+| **O9** | **Code length:** keep the agreed `SAUD-3K7M` (4 characters)? | 4 characters = ~923,000 possible codes, so guessing at scale has to be stopped by limits rather than by the code itself. | **Decided (16 Oct, D-089): 4 characters, the agreed `SAUD-3K7M`.** | Built. Wrong guesses are limited per network address (10 in 15 min, 30 a day) and site-wide (300 an hour, then a bot check or a pause): HANDOVER §10. Analysis: `ARCHITECTURE.md` §3.3. |
 | **O10** | Do you approve **optional photo captions**, the letter's **"Dear ___" / sign-off fields**, and a **2,000-character letter limit**? | Small additions that make the stamps feel personal. The limit keeps letters readable on a phone. | Yes to all three. | Built and marked [PROPOSED]. |
 | **O11** | Should a **"new" postmark** appear on stamps the sender has updated since the recipient's last visit? | "Codes never expire": senders add to it over time, and recipients should notice. | Yes, small and quiet. | Built. |
 | **O12** | May the admin **reset the reveal** (so the next tap plays the opening again), e.g. after a support case or a regift? | Without it, a reveal spoiled by accident is lost for good. | Yes, admin-only, logged in the audit trail. | Built in admin unit detail. |
@@ -37,7 +37,7 @@ critical path** (21 Nov 2026), because the ceramics are made before the software
 | **SQ6** | Should the sender see that the envelope has been **opened** (status in their portal, no email)? | It's a lovely reciprocity moment. Notifications can come later. | Portal status only at launch. | Built ("Opened" status on the portal). |
 | **SQ7** | May emails with the private link say to **open it in Safari or Chrome** for voice recording? | Email and social apps often block the microphone in their built-in browsers. | Yes, one plain line. | Built into the email copy. |
 | **O14** | **Legal pages:** who supplies the Privacy Policy and Terms wording, and by when? | We style the pages; the words must come from you (lawyer or a service like Termly). | Text by 7 Nov 2026 so it ships with launch. | Styled pages; the wording goes in `content/legal.ts` (facts the lawyer needs: HANDOVER §9). |
-| **O15** | **Admin users:** just you and the developer? Is two-factor sign-in acceptable? | Admin can see and remove content. | Two admin accounts, two-factor on (= AQ5). | Built: more admins with `npm run admin -- add`; two-factor on with `TOTP_ENC_KEY`. |
+| **O15** | **Admin users:** just you and the developer? | Admin can see and remove content. | Two admin accounts, email and password, lock-out after 5 wrong passwords. | Built: more admins with `npm run admin -- add`. |
 
 ## From the architecture review (AQ1–AQ13; details in `ARCHITECTURE.md` §18)
 
@@ -47,7 +47,7 @@ critical path** (21 Nov 2026), because the ceramics are made before the software
 | **AQ2** ⏱ | Who prints the code cards, and what's their lead time? Can they print variable data from a spreadsheet? | The card print file and the chip URL file are produced at the same time. | Digital variable-data print; files delivered **22 Oct**. |
 | **AQ3** | Which address should emails come from? | Deliverability and brand. | `letters@{your domain}` via Resend. |
 | **AQ4** | A shared mailbox that owns all the service accounts? | Ownership survives staff changes. | `tech@{your domain}` with two-factor. |
-| **AQ5** | Two-factor sign-in for the admin panel? | Admin can see, reset, and remove everything. | Yes, for both admins. |
+| **AQ5** | Two-factor sign-in for the admin panel? | Admin can see, reset, and remove everything. | **Closed (16 Oct, D-089): not taken up.** Email and password, with lock-out and the audit log. |
 | **AQ6** | An off-provider backup copy (Backblaze B2, about $0–1/month)? | Our storage provider (Cloudflare R2) has no built-in file versioning, so we keep versions ourselves plus a second copy elsewhere. | Yes. |
 | **AQ7** | Where are most customers (US, EU, elsewhere)? | Decides where data is stored. | US East unless mostly EU. |
 | **AQ8** | When the **sender** taps their own ceramic to test it, should the reveal play without using up the recipient's first open? | Senders will test before gifting. | Yes, with a small "only you see this; it won't count" note. |
@@ -57,7 +57,7 @@ critical path** (21 Nov 2026), because the ceramics are made before the software
 | **AQ12** ⏱ | Domain registrar and term (extends O2)? | Chips are permanent. | Cloudflare Registrar, 10 years, auto-renew, registrar lock. |
 | **AQ13** | Expected orders around Black Friday / December, and the share sent as gifts (Path B)? | Email plan and database sizing. | Upgrade the email plan for Nov–Dec if > 60 gift emails/day. |
 
-**Status in the build (16 Oct, D-083):** AQ5 built, on with one setting (`TOTP_ENC_KEY`). AQ6 built (nightly
+**Status in the build (16 Oct, D-083, D-089):** AQ5 closed: admin sign-in is email and password. AQ6 built (nightly
 encrypted copy to B2, restore drill; needs the account, `BACKUPS.md`). AQ8 built (the sender's own phone, and an
 admin's packing check, never use up the first open). AQ9 built (reset keeps contents and seal). AQ10 built (90
 days, then deleted; restorable from Admin → History meanwhile). Note for AQ6: storage is now Supabase (D-075), not

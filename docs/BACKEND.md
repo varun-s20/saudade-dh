@@ -47,7 +47,7 @@ Nothing in the screens changes between the two. Decision record: `DECISIONS.md` 
 
 ```bash
 npm run build && npx next start -p 3200      # second terminal
-npm run api:smoke -- --base http://localhost:3200   # ~94 API checks: claim → uploads → conversion → stamps → seal → reveal → admin (2FA, history, batches) → cron
+npm run api:smoke -- --base http://localhost:3200   # ~80 API checks: claim → uploads → conversion → stamps → seal → reveal → admin (sign-in, history, batches) → cron
 npm run api:e2e   -- --base http://localhost:3200   # the same journey in a real browser, ~32 checks (add --engine webkit)
 ```
 
@@ -93,7 +93,6 @@ answers (`LAUNCH_READINESS.md` §2).
 | Email delivery | **Built** (Resend). Needs the domain (O2) and `RESEND_API_KEY` | `lib/server/email.ts` |
 | Off-provider backups + restore drill | **Built and drilled locally.** Needs B2 + GitHub secrets | `BACKUPS.md` |
 | Purge / song-check / cleanup jobs | **Built**: nightly `/api/cron/daily` (Vercel Cron) | `lib/server/ops.ts`, HANDOVER §6 |
-| Admin 2FA (TOTP) | **Built**: on when `TOTP_ENC_KEY` is set | Admin → Security, HANDOVER §8 |
 | Turnstile on the global claim breaker | **Built**: on when its keys are set | `app/api/claim`, HANDOVER §10 |
 | Security headers (CSP, HSTS) | **Built** | `next.config.ts` |
 | Hosting in the client's accounts | At handover | HANDOVER §2–3 |

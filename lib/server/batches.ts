@@ -15,7 +15,6 @@ interface BatchRow {
   created_at: Date;
   unit_count: number;
   status: BatchStatus;
-  code_length: number;
   chip_domain: string;
   encoded_at: Date | null;
   claimed: number;
@@ -27,14 +26,13 @@ const toBatch = (b: BatchRow): Batch => ({
   createdAt: isoReq(b.created_at),
   count: b.unit_count,
   status: b.status,
-  codeLength: b.code_length,
   chipDomain: b.chip_domain,
   encodedAt: iso(b.encoded_at),
   claimedCount: b.claimed,
 });
 
 const SELECT = `
-  select b.id, b.label, b.created_at, b.unit_count, b.status, b.code_length, b.chip_domain, b.encoded_at,
+  select b.id, b.label, b.created_at, b.unit_count, b.status, b.chip_domain, b.encoded_at,
          (select count(*)::int from units u where u.batch_id = b.id and u.code_redeemed_at is not null) as claimed
   from batches b`;
 

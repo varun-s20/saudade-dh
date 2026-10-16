@@ -1,21 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Logo } from "@/components/ui/Logo";
 import { dataSource, services } from "@/lib/services";
 import { DEMO_ADMIN } from "@/lib/services/mock";
-import type { AdminSession, ServiceError } from "@/lib/services/types";
+import type { ServiceError } from "@/lib/services/types";
 import { AdminButton, AdminInput } from "./ui";
 
-/** Where a fresh session goes: the panel, or first the authenticator set-up. */
-const homeFor = (s: AdminSession) => (s.twoFactor === "enrol" ? "/admin/security" : "/admin/dashboard");
-
-function errorText(e: ServiceError, step: "password" | "code"): string {
+function errorText(e: ServiceError): string {
   if (e.code === "unauthorized") {
     if (e.detail === "locked") return "Too many wrong attempts. This account is locked for 15 minutes.";
-    if (e.detail === "invalid_otp") return "That code didn't work. Codes change every 30 seconds: try the newest one.";
-    return step === "code" ? "That code didn't work." : "That email and password don't match. Check them and try again.";
+    return "That email and password don't match. Check them and try again.";
   }
   if (e.code === "rate_limited") return "Too many attempts. Wait a minute, then try again.";
   if (e.code === "invalid_input") return "Enter your email and password.";
@@ -23,35 +19,23 @@ function errorText(e: ServiceError, step: "password" | "code"): string {
   return "Something went wrong. Try again.";
 }
 
-/**
- * S20: admin sign-in. Step 1 is email and password; when the account has an authenticator
- * (two-factor sign-in, AQ5) step 2 asks for its 6-digit code, or one of the recovery codes.
- * Signed-in admins go straight on.
- */
+/** S20: admin sign-in (email and password). Signed-in admins go straight to the dashboard. */
 export function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [step, setStep] = useState<"password" | "code">("password");
-  const [code, setCode] = useState("");
-  const [recovery, setRecovery] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const codeRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let alive = true;
     void services.admin.getSession().then((s) => {
-      if (alive && s) router.replace(homeFor(s));
+      if (alive && s) router.replace("/admin/dashboard");
     });
     return () => {
       alive = false;
     };
   }, [router]);
-
-  useEffect(() => {
-    if (step === "code") codeRef.current?.focus();
-  }, [step, recovery]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -59,28 +43,17 @@ export function LoginScreen() {
       setError("Enter your email and password.");
       return;
     }
-    if (step === "code" && !code.trim()) {
-      setError(recovery ? "Enter one of your recovery codes." : "Enter the 6-digit code from your authenticator app.");
-      return;
-    }
     setBusy(true);
     setError(null);
-    const res = await services.admin.signIn(email, password, step === "code" ? code : undefined);
+    const res = await services.admin.signIn(email, password);
     setBusy(false);
     if (!res.ok) {
-      if (res.error.code === "unauthorized" && res.error.detail === "otp_required") {
-        setStep("code");
-        return;
-      }
-      setError(errorText(res.error, step));
-      if (step === "code") setCode("");
+      setError(errorText(res.error));
       return;
     }
-    // Activity keeps this page mounted: don't leave the secrets sitting in the fields.
+    // Activity keeps this page mounted: don't leave the password sitting in the field.
     setPassword("");
-    setCode("");
-    setStep("password");
-    router.push(homeFor(res.data));
+    router.push("/admin/dashboard");
   };
 
   return (
@@ -106,95 +79,38 @@ export function LoginScreen() {
             className="border-2 border-admin-ink bg-admin-surface p-5 shadow-print md:p-6"
             aria-describedby="login-error"
           >
-            {step === "password" ? (
-              <>
-                <h1 className="display text-2xl text-admin-ink">Sign in</h1>
-                <p className="mt-1 text-sm text-admin-ink-soft">Orders, codes and support for Saudade.</p>
+            <h1 className="display text-2xl text-admin-ink">Sign in</h1>
+            <p className="mt-1 text-sm text-admin-ink-soft">Orders, codes and support for Saudade.</p>
 
-                <div className="mt-5 grid gap-4">
-                  <AdminInput
-                    label="Email"
-                    name="email"
-                    type="email"
-                    autoComplete="username"
-                    inputMode="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                  <AdminInput
-                    label="Password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <h1 className="display text-2xl text-admin-ink">{recovery ? "Use a recovery code" : "Enter your code"}</h1>
-                <p className="mt-1 text-sm text-admin-ink-soft">
-                  {recovery
-                    ? "Each recovery code works once. Set up your authenticator again afterwards if your phone is gone."
-                    : `Open your authenticator app and enter the 6-digit code for Saudade (${email.trim()}).`}
-                </p>
-                <div className="mt-5">
-                  <AdminInput
-                    ref={codeRef}
-                    label={recovery ? "Recovery code" : "6-digit code"}
-                    name={recovery ? "recovery-code" : "one-time-code"}
-                    type="text"
-                    autoComplete={recovery ? "off" : "one-time-code"}
-                    inputMode={recovery ? "text" : "numeric"}
-                    pattern={recovery ? undefined : "[0-9]*"}
-                    maxLength={recovery ? 14 : 6}
-                    spellCheck={false}
-                    autoCapitalize="off"
-                    value={code}
-                    onChange={(e) => setCode(recovery ? e.target.value : e.target.value.replace(/\D/g, ""))}
-                    inputClassName="font-postal tracking-[0.2em]"
-                    required
-                  />
-                </div>
-              </>
-            )}
+            <div className="mt-5 grid gap-4">
+              <AdminInput
+                label="Email"
+                name="email"
+                type="email"
+                autoComplete="username"
+                inputMode="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <AdminInput
+                label="Password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
 
             <p id="login-error" role="alert" aria-live="assertive" className="mt-3 min-h-5 text-sm text-danger">
               {error}
             </p>
 
             <AdminButton type="submit" tone="primary" loading={busy} className="mt-2 w-full">
-              {busy ? "Signing in…" : step === "code" ? "Verify and sign in" : "Sign in"}
+              {busy ? "Signing in…" : "Sign in"}
             </AdminButton>
-
-            {step === "code" && (
-              <div className="mt-3 flex flex-wrap justify-between gap-2">
-                <AdminButton
-                  tone="quiet"
-                  onClick={() => {
-                    setRecovery((r) => !r);
-                    setCode("");
-                    setError(null);
-                  }}
-                >
-                  {recovery ? "Use the authenticator instead" : "Use a recovery code"}
-                </AdminButton>
-                <AdminButton
-                  tone="quiet"
-                  onClick={() => {
-                    setStep("password");
-                    setCode("");
-                    setRecovery(false);
-                    setError(null);
-                  }}
-                >
-                  Back
-                </AdminButton>
-              </div>
-            )}
           </form>
 
           {dataSource === "mock" && (

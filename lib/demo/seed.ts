@@ -50,7 +50,6 @@ export function buildSeed(now: number = Date.now()): DbState {
     createdAt: iso(21 * DAY),
     count: 0,
     status: "generated",
-    codeLength: site.codes.length,
     chipDomain: site.chipDomain,
     encodedAt: null,
     claimedCount: 0,

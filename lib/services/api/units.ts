@@ -3,7 +3,7 @@ import type { ClaimResult, SenderEnvelope, UnitService } from "@/lib/services/ty
 import { fail, ok, rememberSenderUnit, request } from "./http";
 import { takeMediaUrls, type WithMediaUrls } from "./media";
 
-/** Longest thing worth sending: "SAUD-XXXX-XXXX" plus stray spaces. Anything longer is invalid. */
+/** Longest thing worth sending: "SAUD-XXXX" plus stray spaces. Anything longer is invalid. */
 const MAX_CODE_INPUT = 32;
 
 export const apiUnitService: UnitService = {

@@ -3,14 +3,13 @@
  * before real ceramics ship, checked live, with the fix in plain words. It reads configuration and
  * counts only; it never changes anything. docs/HANDOVER.md §4 explains each variable.
  *
- * Build-time items (chip domain, code length, showcase link, support address, legal wording) come
+ * Build-time items (chip domain, showcase link, support address, legal wording) come
  * from lib/readiness-config.ts, shared with the prototype; this adds what only the server knows.
  */
 import "server-only";
 import { PLACEHOLDER_CHIP_DOMAIN, site } from "@/config/site";
 import { configChecks } from "@/lib/readiness-config";
 import type { Readiness, ReadinessCheck } from "@/lib/services/types";
-import { twoFactorRequired } from "./admin-auth";
 import { sql } from "./db";
 import { env } from "./env";
 
@@ -47,20 +46,6 @@ export async function readiness(): Promise<Readiness> {
     env.publicOrigin() ? "ok" : "warn",
     env.publicOrigin() ? `Links in emails start ${env.publicOrigin()}.` : "PUBLIC_APP_ORIGIN is unset, so emailed links use whatever address the request came in on. Set it to the production address.",
   );
-
-  // ── Admin security ──
-  if (!twoFactorRequired()) {
-    add("two_factor", "Admin two-factor sign-in", "warn", "Off. Set TOTP_ENC_KEY (32 random bytes, hex) to require an authenticator for every admin (AQ5).");
-  } else {
-    const [{ missing }] = await sql()<{ missing: number }[]>`
-      select count(*)::int as missing from admin_users where disabled_at is null and totp_enrolled_at is null`;
-    add(
-      "two_factor",
-      "Admin two-factor sign-in",
-      missing ? "warn" : "ok",
-      missing ? `On, but ${missing} admin${missing === 1 ? " has" : "s have"} not set up an authenticator yet (asked at their next sign-in).` : "On, and every admin has an authenticator.",
-    );
-  }
 
   // ── Scheduled work ──
   const runs = new Map((await sql()<RunRow[]>`select task, last_finished_at, last_ok, last_error from ops_runs`).map((r) => [r.task, r]));

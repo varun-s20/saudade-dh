@@ -24,12 +24,8 @@ const ACTION: Record<AuditAction, string> = {
   "admin.signed_in": "Admin signed in",
   "admin.signed_out": "Admin signed out",
   "admin.sign_in_failed": "Admin sign-in failed",
-  "admin.two_factor_enrolled": "Admin set up two-factor sign-in",
-  "admin.recovery_codes_reset": "Admin replaced their recovery codes",
-  "admin.recovery_code_used": "Admin signed in with a recovery code",
   "admin.created": "Admin account created",
   "admin.password_reset": "Admin password reset",
-  "admin.two_factor_reset": "Admin two-factor sign-in reset",
   "admin.disabled": "Admin account disabled",
   "admin.enabled": "Admin account enabled again",
   "system.breaker_tripped": "Mass code-guessing detected: bot check on for 6 hours",
@@ -72,7 +68,6 @@ export function auditTone(action: AuditAction): "neutral" | "good" | "attention"
     action === "batch.voided" ||
     action === "media.rejected" ||
     action === "admin.sign_in_failed" ||
-    action === "admin.recovery_code_used" ||
     action === "system.breaker_tripped"
   )
     return "attention";

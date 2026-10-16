@@ -7,14 +7,13 @@
  *   npm run api:e2e -- --base http://localhost:3200 [--engine webkit] [--skip-media] [--out dir]
  *
  * With DATABASE_URL in the env file it uses two throwaway admins: one for the Node-side API calls,
- * one that signs in through the browser (and, when two-factor sign-in is on, sets up its
- * authenticator through the Security page, then signs in again with a code). Both are disabled at
- * the end. Any Content-Security-Policy violation in any page fails the run.
+ * one that signs in through the browser. Both are disabled at the end. Any
+ * Content-Security-Policy violation in any page fails the run.
  */
 import { chromium, webkit } from "playwright-core";
 import fs from "node:fs";
 import path from "node:path";
-import { connect, tempAdmin, totp } from "./lib/ops-common.mjs";
+import { connect, tempAdmin } from "./lib/ops-common.mjs";
 
 const args = process.argv.slice(2);
 const opt = (n, d) => (args.includes(`--${n}`) ? args[args.indexOf(`--${n}`) + 1] : d);
@@ -74,11 +73,6 @@ const watchCsp = (page, who) =>
 try {
   const signin = await admin("POST", "/api/admin/session", ADMIN);
   check("admin api: sign in", signin.status === 200);
-  if (signin.data?.twoFactor === "enrol") {
-    const setup = await admin("POST", "/api/admin/2fa/setup");
-    const done = await admin("POST", "/api/admin/2fa/confirm", { pending: setup.data?.pending, code: totp(setup.data?.secret ?? "") });
-    check("admin api: two-factor set up for the API admin", done.status === 200);
-  }
   const batch = await admin("POST", "/api/admin/batches", { count: 1, label: `Journey ${ENGINE} ${new Date().toISOString().slice(0, 16)}` });
   const code = batch.data?.rows?.[0]?.code;
   check("admin api: fresh unit for this run", Boolean(code), code ?? `status ${batch.status}`);
@@ -198,40 +192,10 @@ try {
   watchCsp(a, "admin");
   await a.goto(`${BASE}/admin`, { waitUntil: "networkidle" });
   check("admin: no demo credentials shown on the real backend", !(await a.getByText(/demo sign-in/i).first().isVisible().catch(() => false)));
-  const signInUi = async (otp) => {
-    await a.getByLabel(/^Email/i).fill(BROWSER_ADMIN.email);
-    await a.getByLabel(/^Password/i).fill(BROWSER_ADMIN.password);
-    await a.keyboard.press("Enter");
-    if (otp) {
-      await a.getByLabel(/6-digit code/i).waitFor({ timeout: 15000 });
-      await a.getByLabel(/6-digit code/i).fill(otp());
-      await a.getByRole("button", { name: /Verify and sign in/i }).click();
-    }
-  };
-  await signInUi();
-  await a.waitForURL(/\/admin\/(dashboard|security)/, { timeout: 20000 }).catch(() => {});
-  if (/\/admin\/security/.test(a.url())) {
-    // Two-factor sign-in is on: a first sign-in must set up the authenticator before anything else.
-    check("2fa: a first sign-in is held on the Security page", await seen(a.getByText(/Set up your authenticator/i)));
-    await a.getByRole("button", { name: /Start set-up/i }).click();
-    check("2fa: QR code shown", await seen(a.getByRole("img", { name: /QR code/i })));
-    const secret = (await a.locator("p.select-all").first().innerText()).replace(/\s+/g, "");
-    await a.screenshot({ path: path.join(OUT, `${ENGINE}-06a-enrol.png`) });
-    await a.getByLabel(/Code from the app/i).fill(totp(secret));
-    await a.getByRole("button", { name: /^Confirm$/ }).click();
-    check("2fa: ten recovery codes shown once", (await seen(a.getByText(/Save your recovery codes/i))) && (await a.locator('[aria-label="Recovery codes"] li').count()) === 10);
-    await a.getByLabel(/saved these somewhere safe/i).check();
-    await a.getByRole("button", { name: /^Continue$/ }).click();
-    await a.waitForURL(/\/admin\/dashboard/, { timeout: 20000 }).catch(() => {});
-    check("2fa: …then on to the dashboard", /\/admin\/dashboard/.test(a.url()));
-    await a.getByRole("button", { name: /Sign out/i }).click();
-    await a.waitForURL(/\/admin$/, { timeout: 15000 }).catch(() => {});
-    // Let the sign-in page hydrate first: typing into server HTML is reset by hydration (WebKit is slow enough to hit it).
-    await a.waitForLoadState("networkidle");
-    await signInUi(() => totp(secret, 1)); // the next step's code: the enrolment code can't be replayed
-    await a.waitForURL(/\/admin\/dashboard/, { timeout: 20000 }).catch(() => {});
-    check("2fa: signs in again with a code from the app", /\/admin\/dashboard/.test(a.url()));
-  }
+  await a.getByLabel(/^Email/i).fill(BROWSER_ADMIN.email);
+  await a.getByLabel(/^Password/i).fill(BROWSER_ADMIN.password);
+  await a.keyboard.press("Enter");
+  await a.waitForURL(/\/admin\/dashboard/, { timeout: 20000 }).catch(() => {});
   check("admin: signed in to the dashboard", /\/admin\/dashboard/.test(a.url()));
   check("admin: the launch checklist is on the dashboard", await seen(a.getByRole("heading", { name: /Launch checklist/i })));
   await a.waitForLoadState("networkidle"); // WebKit reports fetches cancelled by navigating away as page errors

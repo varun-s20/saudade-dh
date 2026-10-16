@@ -94,7 +94,7 @@ browser in a 390×844 responsive view. The admin part is best on a laptop.
 ## Questions to settle in the meeting (in this order)
 1. **O2 + AQ12** Domain on the chips (permanent), registrar, auto-renew. ⏱
 2. **O3 + AQ2** Encoding run date; card printer + lead time. ⏱
-3. **O9** 4- vs 8-character codes (decide before cards print). ⏱
+3. **O9** Code length: settled, the agreed 4 characters (`SAUD-3K7M`).
 4. **AQ1** Matching cards to ceramics at packing (unit number on card + base sticker). ⏱
 5. **O7** Approve "Seal & send" and "still being written".
 6. **O1** Where it's sold; checkout stays with the store; auto code emails later.
