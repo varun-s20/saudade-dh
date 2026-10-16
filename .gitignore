@@ -45,3 +45,9 @@ next-env.d.ts
 
 # QA output
 /.e2e/
+/.e2e-api/
+
+# local backup runs (scripts/backup/backup-db.sh default OUT_DIR; encrypted, but never commit them)
+/backup-out/
+# provisioning files (scripts/provision.mjs): the card file holds every code in clear
+/provision-out/

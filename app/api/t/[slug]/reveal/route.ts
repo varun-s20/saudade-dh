@@ -4,9 +4,12 @@
  * The first open is recorded ONLY here, after "Tap to open" and the choreography (or Skip), never
  * on a page load (ARCHITECTURE.md §8). The unit row is locked so two phones tapping at once give
  * one `revealed` and one `duplicate`. Nothing is consumed when the request carries this unit's
- * sender token (the sender testing their own ceramic: AQ8) or comes from a link-preview bot.
+ * sender token (the sender testing their own ceramic: AQ8), an admin session (packing checks:
+ * every boxed ceramic is tapped before the box is closed, ARCHITECTURE.md §17), or comes from a
+ * link-preview bot.
  */
 import { site } from "@/config/site";
+import { adminFromRequest } from "@/lib/server/admin-auth";
 import { ipHash, ipKey } from "@/lib/server/crypto";
 import { tx } from "@/lib/server/db";
 import { audit, unitBySlug } from "@/lib/server/envelopes";
@@ -30,6 +33,8 @@ export const POST = route<Ctx>(async (req: NextRequest, ctx) => {
   const key = req.headers.get("idempotency-key")?.slice(0, 64) || null;
   const ua = (req.headers.get("user-agent") ?? "").slice(0, 400);
   const senderOf = await senderUnitId(req);
+  // The admin cookie is SameSite=Strict, so it only arrives from the site itself.
+  const admin = await adminFromRequest(req).catch(() => null);
 
   await tx(async (t) => {
     const unit = await unitBySlug(t, slug, true);
@@ -37,8 +42,9 @@ export const POST = route<Ctx>(async (req: NextRequest, ctx) => {
     const bot = BOT_UA.test(ua);
     const revealable = unit.status === "sealed" || (!site.requireSealBeforeReveal && unit.status === "filled");
 
-    let outcome: "revealed" | "duplicate" | "not_revealable" | "sender_excluded" | "bot_ignored";
+    let outcome: "revealed" | "duplicate" | "not_revealable" | "sender_excluded" | "admin_excluded" | "bot_ignored";
     if (senderOf === unit.id) outcome = "sender_excluded";
+    else if (admin) outcome = "admin_excluded";
     else if (bot) outcome = "bot_ignored";
     else if (unit.revealed_at) outcome = "duplicate";
     else if (revealable) outcome = "revealed";
@@ -56,6 +62,8 @@ export const POST = route<Ctx>(async (req: NextRequest, ctx) => {
       await audit(t, { unitId: unit.id, action: "unit.revealed", actor: "recipient", detail: info.skipped ? "skipped choreography" : "watched choreography" });
     } else if (outcome === "sender_excluded") {
       await audit(t, { unitId: unit.id, action: "unit.reveal_excluded", actor: "sender", detail: "sender's own device" });
+    } else if (outcome === "admin_excluded" && admin) {
+      await audit(t, { unitId: unit.id, action: "unit.reveal_excluded", actor: "admin", adminId: admin.adminId, detail: "admin check (not counted)" });
     }
   });
   return noContent();

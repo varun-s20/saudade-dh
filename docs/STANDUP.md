@@ -2,6 +2,40 @@
 
 Short written stand-up per working day: done / next / blocked. Newest first.
 
+## 2026-10-16 · Launch hardening (D-083 to D-088)
+
+**Done**
+- Audited every CLIENT_GUIDE requirement: `LAUNCH_READINESS.md` (status and evidence per line, what waits on Zeya).
+- Closed the whole "not built yet" list:
+  - media conversion (thumbnails, no metadata, AAC voice with server-measured length);
+  - nightly jobs (purge, clean-up, song checks, retries);
+  - admin two-factor sign-in with recovery codes;
+  - Turnstile on the claim breaker;
+  - CSP and security headers;
+  - off-site backups with a restore drill (`BACKUPS.md`).
+- New admin tools:
+  - launch checklist;
+  - Security page;
+  - version history with restore;
+  - batch encoded / void;
+  - card and factory files.
+- New CLIs: `npm run provision` and `npm run admin`.
+- Deployment settings by environment, including 8-character codes (one switch, tested end to end).
+- `HANDOVER.md` for whoever runs it next.
+- **Tests:**
+  - CI on every push: lint, types, 35 unit tests, build, and the whole API on PostgreSQL 15 with a Storage
+    stand-in;
+  - API smoke 94/94 (96/96 with the breaker);
+  - browser journey on the real API 32/32;
+  - prototype journey 32/32 in Chromium and WebKit, 0 axe violations;
+  - the WebKit blocker from 10 Oct is fixed (the cached browser had lost its executable).
+
+**Next:** Zeya: domain (O2), code length (O9), legal wording (O14), accounts; the speed decision
+(`LAUNCH_READINESS.md` §3). Then the ceremony and real-phone testing with encoded samples (AQ11).
+
+**Blocked:** real email, the launch batch and real-device tests wait on O2 and the samples. Rotate the staging
+Supabase service-role key and database password (shared in chat on 9 Oct).
+
 ## 2026-10-13 · Client round 1 (D-082)
 
 **Done**

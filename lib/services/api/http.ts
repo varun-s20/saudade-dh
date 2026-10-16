@@ -30,6 +30,7 @@ const SERVICE_ERROR_CODES: ReadonlySet<ServiceErrorCode> = new Set<ServiceErrorC
   "unsupported_link",
   "nothing_to_seal",
   "invalid_input",
+  "challenge_required",
   "network",
 ]);
 
@@ -62,6 +63,8 @@ export interface RequestOptions {
   expect?: "json" | "text" | "empty";
   headers?: Record<string, string>;
   timeoutMs?: number;
+  /** Override the cookie policy (default: same-origin for admin calls, omitted otherwise). */
+  credentials?: RequestCredentials;
 }
 
 export const ok = <T,>(data: T): ServiceResult<T> => ({ ok: true, data });
@@ -130,8 +133,9 @@ export async function request<T>(opts: RequestOptions): Promise<ServiceResult<T>
       method,
       headers,
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
-      // Admin session cookie is same-origin; sender/recipient calls never need cookies.
-      credentials: auth === "admin" ? "same-origin" : "omit",
+      // Admin session cookie is same-origin; sender/recipient calls don't need cookies (except
+      // the reveal POST, which lets an admin's packing check be recognised: see reveal.ts).
+      credentials: opts.credentials ?? (auth === "admin" ? "same-origin" : "omit"),
       cache: "no-store",
       signal: AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });

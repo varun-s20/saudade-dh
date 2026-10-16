@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useNow } from "@/components/public/useNow";
-import { recipientUrl } from "@/config/site";
+import { PLACEHOLDER_CHIP_DOMAIN, recipientUrl, site } from "@/config/site";
 import { useServiceQuery } from "@/lib/hooks/useServiceQuery";
 import { services } from "@/lib/services";
 import type { DeliveryPath, RevealEvent, UnitDetail } from "@/lib/services/types";
@@ -12,6 +12,7 @@ import { toast } from "@/lib/state/toast";
 import { cn } from "@/lib/utils/cn";
 import { dateTime } from "@/lib/utils/format";
 import { AuditList } from "./AuditList";
+import { ContentHistory } from "./ContentHistory";
 import { loadErrorText, useUnauthorizedRedirect } from "./DashboardScreen";
 import { EmptyState } from "./EmptyState";
 import { StatusChip } from "./StatusChip";
@@ -52,7 +53,7 @@ export function UnitDetailScreen() {
 }
 
 function DetailBody({ detail, onChanged }: { detail: UnitDetail; onChanged: () => void }) {
-  const { unit, contents, audit, reveals } = detail;
+  const { unit, contents, audit, reveals, history } = detail;
   const now = useNow();
   const url = recipientUrl(unit.slug);
 
@@ -77,7 +78,11 @@ function DetailBody({ detail, onChanged }: { detail: UnitDetail; onChanged: () =
               <span className="font-mono text-xs break-all text-admin-ink">{url}</span>
               <CopyButton text={url} label="Copy link" />
             </span>
-            <span className="mt-1 block text-xs text-admin-ink-soft">Encoded on the ceramic&apos;s NFC chip. Domain is a placeholder until it&apos;s confirmed (O2).</span>
+            <span className="mt-1 block text-xs text-admin-ink-soft">
+              Encoded on the ceramic&apos;s NFC chip.
+              {site.chipDomain === PLACEHOLDER_CHIP_DOMAIN && " Domain is a placeholder until it's confirmed (O2)."} Opening it in this browser while
+              signed in (a packing check) never uses up the recipient&apos;s first open.
+            </span>
           </Field>
           <Field label="Delivery path">
             <PathControl unitId={unit.id} path={unit.path} onChanged={onChanged} />
@@ -100,6 +105,7 @@ function DetailBody({ detail, onChanged }: { detail: UnitDetail; onChanged: () =
         </div>
         <div className="space-y-6 lg:col-start-1 lg:row-start-1">
           <UnitContent unitId={unit.id} code={unit.code} contents={contents} now={now} onChanged={onChanged} />
+          <ContentHistory unitId={unit.id} history={history ?? []} onChanged={onChanged} />
           <RevealEvents reveals={reveals} revealedAt={unit.revealedAt} />
           <Card title="Audit log" description="Every change to this unit, newest first." bodyClassName="px-4 py-5 md:px-5">
             <AuditList entries={audit} now={now} emptyText="No changes recorded yet." />

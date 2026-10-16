@@ -7,10 +7,14 @@ import { takeMediaUrls, type WithMediaUrls } from "./media";
 const MAX_CODE_INPUT = 32;
 
 export const apiUnitService: UnitService = {
-  async claim(code) {
+  async claim(code, opts) {
     const input = code.trim();
     if (!input || input.length > MAX_CODE_INPUT) return fail("invalid_code");
-    const res = await request<ClaimResult>({ method: "POST", path: "/api/claim", body: { code: input } });
+    const res = await request<ClaimResult>({
+      method: "POST",
+      path: "/api/claim",
+      body: { code: input, ...(opts?.challengeToken ? { turnstileToken: opts.challengeToken } : {}) },
+    });
     if (res.ok) rememberSenderUnit(res.data.slug, res.data.token);
     return res;
   },

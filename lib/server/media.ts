@@ -1,8 +1,9 @@
 /**
  * Media rules (ARCHITECTURE.md §7): what may be uploaded, how big, and what the bytes must be.
  * Photos arrive already compressed in the browser (≤ 2048 px, EXIF dropped by canvas re-encode);
- * voice arrives as the recorder's own format. Server-side normalisation (sharp/ffmpeg) is the
- * Phase 3 job pipeline; until then the verified original is what gets served (D-075).
+ * voice arrives as the recorder's own format. After these checks every file is normalised
+ * (lib/server/media-pipeline.ts: display JPEG + WebP thumbnail, or AAC/m4a), and the normalised
+ * files are what gets served (D-083).
  */
 import "server-only";
 import { site } from "@/config/site";

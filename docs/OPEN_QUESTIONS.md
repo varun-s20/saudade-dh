@@ -12,7 +12,7 @@ critical path** (21 Nov 2026), because the ceramics are made before the software
 | # | Question | Why it matters | Recommended default | In the prototype |
 |---|---|---|---|---|
 | **O1** | **Payment / checkout:** where is Saudade sold (Shopify, Stripe, other)? Is checkout part of this build, or handled by your store? | You listed it as non-negotiable, but it was never in our agreed scope. | Sell through your store (e.g. Shopify). We build a webhook for automatic code emails as a later phase. For the first 300, you email Path B codes from the admin panel. | Not built. Admin "Email code" covers Path B manually. |
-| **O2** ⏱ | **Domain:** which domain goes on the chips? Is it registered in your name with long-term auto-renew? | Chip URLs are permanent once encoded. If the domain lapses, every envelope breaks. | A short custom domain in your name: renew 10 years ahead, registrar lock on, auto-renew on. Keep it to 41 characters or fewer so the NFC record stays small (see SQ5). | Placeholder `saudade.example` in `config/site.ts`. CSV generator uses it. |
+| **O2** ⏱ | **Domain:** which domain goes on the chips? Is it registered in your name with long-term auto-renew? | Chip URLs are permanent once encoded. If the domain lapses, every envelope breaks. | A short custom domain in your name: renew 10 years ahead, registrar lock on, auto-renew on. Keep it to 41 characters or fewer so the NFC record stays small (see SQ5). | One setting, `NEXT_PUBLIC_CHIP_DOMAIN` (placeholder `saudade.example` until then). Each batch records its domain; the launch checklist and the provisioning CLI refuse the placeholder. |
 | **O3** ⏱ | **Encoding run date:** when does the factory need the URL CSV? | It is the first hard dependency for the physical product. | We need the domain (O2) at least **5 working days** before that date to generate, verify, and test-encode a sample tag. | Batch generator + CSV download work today (admin → Batch). |
 | **O4** | **Stamp artwork:** delivery date and formats? | It blocks the final look of the reveal page. | SVG preferred, otherwise transparent PNG at @2x and @3x, about 240×300 artboard per stamp, plus the heart stamp. | Original placeholder stamps marked "PLACEHOLDER — client artwork pending". Swap happens in one file. |
 | **O5** | **Recipient access:** your form says recipients view "via their activation code". Please confirm recipients use the **NFC link** and the activation code is for the **sender only**. | Security: the code grants edit access, so a recipient must never need it. | Recipients only tap; the code stays with the sender. | Built this way. |
@@ -24,7 +24,7 @@ critical path** (21 Nov 2026), because the ceramics are made before the software
 
 | # | Question | Why it matters | Recommended default | In the prototype |
 |---|---|---|---|---|
-| **O9** ⏱ | **Code length:** keep the agreed `SAUD-3K7M` (4 characters), or use `SAUD-3K7M-Q2XF` (8)? | 4 characters = ~923,000 possible codes. With 300 unclaimed units, 100 devices making 50 guesses a day would take over *some* stranger's envelope within a day about 80% of the time; at 3,000 units even one device succeeds within a month. Stricter rate limits would start locking out real buyers. 8 characters cuts a year-long attack on 3,000 units to under 1%. Must be decided **before cards are printed**. | 8 characters (`SAUD-3K7M-Q2XF`) for every production unit, including the launch batch. Cost: about 4 more characters to type. Analysis: `ARCHITECTURE.md` §3.3. | 4 characters, as agreed for the demo. `config/site.ts` → `codes.length` changes it. |
+| **O9** ⏱ | **Code length:** keep the agreed `SAUD-3K7M` (4 characters), or use `SAUD-3K7M-Q2XF` (8)? | 4 characters = ~923,000 possible codes. With 300 unclaimed units, 100 devices making 50 guesses a day would take over *some* stranger's envelope within a day about 80% of the time; at 3,000 units even one device succeeds within a month. Stricter rate limits would start locking out real buyers. 8 characters cuts a year-long attack on 3,000 units to under 1%. Must be decided **before cards are printed**. | 8 characters (`SAUD-3K7M-Q2XF`) for every production unit, including the launch batch. Cost: about 4 more characters to type. Analysis: `ARCHITECTURE.md` §3.3. | Both built and tested end to end; one setting, `NEXT_PUBLIC_CODE_LENGTH=8`. The demo stays on 4. |
 | **O10** | Do you approve **optional photo captions**, the letter's **"Dear ___" / sign-off fields**, and a **2,000-character letter limit**? | Small additions that make the stamps feel personal. The limit keeps letters readable on a phone. | Yes to all three. | Built and marked [PROPOSED]. |
 | **O11** | Should a **"new" postmark** appear on stamps the sender has updated since the recipient's last visit? | "Codes never expire": senders add to it over time, and recipients should notice. | Yes, small and quiet. | Built. |
 | **O12** | May the admin **reset the reveal** (so the next tap plays the opening again), e.g. after a support case or a regift? | Without it, a reveal spoiled by accident is lost for good. | Yes, admin-only, logged in the audit trail. | Built in admin unit detail. |
@@ -36,8 +36,8 @@ critical path** (21 Nov 2026), because the ceramics are made before the software
 | **SQ5** | **Domain length** (extends O2): keep the encoded domain at 41 characters or fewer, never a hosting-provider domain, auto-renewed for years. | The chip URL can never change. | As stated. | n/a |
 | **SQ6** | Should the sender see that the envelope has been **opened** (status in their portal, no email)? | It's a lovely reciprocity moment. Notifications can come later. | Portal status only at launch. | Built ("Opened" status on the portal). |
 | **SQ7** | May emails with the private link say to **open it in Safari or Chrome** for voice recording? | Email and social apps often block the microphone in their built-in browsers. | Yes, one plain line. | Built into the email copy. |
-| **O14** | **Legal pages:** who supplies the Privacy Policy and Terms wording, and by when? | We style the pages; the words must come from you (lawyer or a service like Termly). | Text by 7 Nov 2026 so it ships with launch. | Styled templates with clearly marked placeholder text. |
-| **O15** | **Admin users:** just you and the developer? Is two-factor sign-in acceptable? | Admin can see and remove content. | Two admin accounts, two-factor on (= AQ5). | Simulated login. |
+| **O14** | **Legal pages:** who supplies the Privacy Policy and Terms wording, and by when? | We style the pages; the words must come from you (lawyer or a service like Termly). | Text by 7 Nov 2026 so it ships with launch. | Styled pages; the wording goes in `content/legal.ts` (facts the lawyer needs: HANDOVER §9). |
+| **O15** | **Admin users:** just you and the developer? Is two-factor sign-in acceptable? | Admin can see and remove content. | Two admin accounts, two-factor on (= AQ5). | Built: more admins with `npm run admin -- add`; two-factor on with `TOTP_ENC_KEY`. |
 
 ## From the architecture review (AQ1–AQ13; details in `ARCHITECTURE.md` §18)
 
@@ -56,6 +56,12 @@ critical path** (21 Nov 2026), because the ceramics are made before the software
 | **AQ11** ⏱ | At least 5 encoded sample ceramics in final glaze by **13 Nov**? | Real-device testing before launch. | Yes. |
 | **AQ12** ⏱ | Domain registrar and term (extends O2)? | Chips are permanent. | Cloudflare Registrar, 10 years, auto-renew, registrar lock. |
 | **AQ13** | Expected orders around Black Friday / December, and the share sent as gifts (Path B)? | Email plan and database sizing. | Upgrade the email plan for Nov–Dec if > 60 gift emails/day. |
+
+**Status in the build (16 Oct, D-083):** AQ5 built, on with one setting (`TOTP_ENC_KEY`). AQ6 built (nightly
+encrypted copy to B2, restore drill; needs the account, `BACKUPS.md`). AQ8 built (the sender's own phone, and an
+admin's packing check, never use up the first open). AQ9 built (reset keeps contents and seal). AQ10 built (90
+days, then deleted; restorable from Admin → History meanwhile). Note for AQ6: storage is now Supabase (D-075), not
+R2; the reasoning is the same.
 
 ## Correction to communicate: running costs
 

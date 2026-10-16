@@ -1,13 +1,26 @@
 /** CSV helpers for the batch provisioning screen (S24). Browser-only for the download. */
+import { ndefBytes } from "@/lib/parsing/ndef";
 import type { ProvisionedRow } from "@/lib/services/types";
 
-/**
- * Same shape as the prototype's service export: `unit_no,code,slug,url`, RFC 4180 quoting,
- * trailing newline. (Production writes a card file and a factory file instead; ARCHITECTURE §5.)
- */
+const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+const csv = (header: string, rows: string[][]) => [header, ...rows.map((r) => r.map(esc).join(","))].join("\n") + "\n";
+
+/** Everything in one file: `unit_no,code,slug,url` (the prototype's own export). */
 export function rowsToCsv(rows: ProvisionedRow[]): string {
-  const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  return ["unit_no,code,slug,url", ...rows.map((r) => [r.unitNo ?? "", r.code, r.slug, r.url].map(esc).join(","))].join("\n") + "\n";
+  return csv("unit_no,code,slug,url", rows.map((r) => [r.unitNo ?? "", r.code, r.slug, r.url]));
+}
+
+/**
+ * The CARD file, for the printer: `unit_no,code`. Secret: it exists once, at generation (codes are
+ * stored hashed), and should be deleted once the cards are printed (ARCHITECTURE.md §3.6).
+ */
+export function cardsCsv(rows: ProvisionedRow[]): string {
+  return csv("unit_no,code", rows.map((r) => [r.unitNo ?? "", r.code]));
+}
+
+/** The FACTORY file, for the encoding run: `unit_no,slug,url,ndef_bytes`. No codes in it. */
+export function factoryCsv(rows: ProvisionedRow[]): string {
+  return csv("unit_no,slug,url,ndef_bytes", rows.map((r) => [r.unitNo ?? "", r.slug, r.url, String(ndefBytes(r.url))]));
 }
 
 /** "Launch run · 300" → "launch-run-300" */
@@ -23,11 +36,11 @@ export function labelSlug(label: string): string {
   );
 }
 
-/** saudade-<label-slug>-<yyyy-mm-dd>.csv, dated by the batch's creation (local date). */
-export function batchFilename(label: string, createdAtIso: string): string {
+/** saudade-[kind-]<label-slug>-<yyyy-mm-dd>.csv, dated by the batch's creation (local date). */
+export function batchFilename(label: string, createdAtIso: string, kind?: "cards" | "factory"): string {
   const d = new Date(createdAtIso);
   const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  return `saudade-${labelSlug(label)}-${ymd}.csv`;
+  return `saudade-${kind ? `${kind}-` : ""}${labelSlug(label)}-${ymd}.csv`;
 }
 
 /** Trigger a file download from text (Blob + temporary object URL). */

@@ -917,6 +917,102 @@ Product owner's review, replacing parts of D-079's revision:
   product nobody sends anything: the recipient holds their phone to the heart and the chip opens that page.
   Set the flag to false for launch.
 
+## Launch hardening (2026-10-16)
+
+Scope check first: the product owner confirmed the contract is `CLIENT_GUIDE.md` (the $1,000 offer), not the
+earlier proposal's plans, so the four stamps stay Photos / Letter / Voice / Song and the deferred list stands.
+Everything below closes the "not built yet" list in `BACKEND.md` §4 and the gaps found by auditing every
+CLIENT_GUIDE requirement (`LAUNCH_READINESS.md`).
+
+### D-083 · The launch work, as built
+- **Media pipeline** (`lib/server/media-pipeline.ts`, `media-jobs.ts`): on upload-complete, photos become a display
+  JPEG (≤ 1600 px, mozjpeg q80) and a 480 px WebP thumbnail, EXIF orientation applied and **every** metadata field
+  dropped, 50 MP decompression-bomb guard; voice notes become mono AAC 64 kbps m4a, loudness-normalised, and their
+  length is measured by ffmpeg (the 3:00 cap no longer trusts the browser). A bad file is rejected
+  (`upload_failed` / `too_long`); a platform failure serves the verified original and queues a retry, so a sender
+  is never blocked. Envelopes sign the variants (thumbnails under `{id}:thumb`) and report the voice note as
+  `audio/mp4`. Variants live at `media/{unit}/{media}/v1/…`; a format change means v2, never an overwrite.
+- **Jobs and cron**: the `jobs` table is now used (`for update skip locked`, backoff, `dead` after 5 tries).
+  `vercel.json` runs `/api/cron/daily` at 03:00 UTC (allowed on every Vercel plan): stale uploads, a 7-day orphan
+  sweep into the 90-day recovery window, the purge after it, raw-upload deletion 7 days after conversion, a
+  backfill of anything never converted (covers staging's older uploads), retries, song checks, and the §5.2
+  retention clean-up. `/api/cron/jobs` exists for a frequent schedule on Vercel Pro. Both need `CRON_SECRET`.
+- **Songs**: every saved track is recorded in `song_catalog`; the nightly check marks a track unavailable only on
+  a definite provider "not found", never on an error. Envelopes merge `unavailable`; the song world already
+  rendered it; the sender's editor now says so.
+- **Admin two-factor (AQ5)**: RFC 6238 TOTP, secrets AES-256-GCM sealed to their admin row with `TOTP_ENC_KEY`,
+  replay blocked by the last used step, 10 hashed single-use recovery codes, stateless enrolment (the secret only
+  stored once a code proves it). On when `TOTP_ENC_KEY` is set: a first sign-in is held on Admin → Security until
+  enrolled. Wrong codes count towards the same 5-strike lock as passwords. Lost phone and codes: CLI only.
+- **Claim breaker + Turnstile**: with Turnstile keys, 300 failed claims in an hour turn on a bot check for every
+  claim for 6 hours (logged once as `system.breaker_tripped`); without keys, the old behaviour (pause to the end of
+  the hour). New error code `challenge_required`.
+- **Admin packing checks**: a reveal POST from a browser with an admin session is `admin_excluded` (the recipient
+  client now sends cookies on that one call).
+- **Batches**: list shows every batch with status, claim count, code length and domain; **Mark encoded**
+  (permanent) and **Void** (only before encoding and before any claim; a void batch's codes are unknown codes).
+  The factory CSV uses the domain recorded on the batch, never the current setting. Generation hands out two
+  files: the card file (codes, for the printer) and the factory file (URLs + NDEF bytes); codes never go to the
+  factory.
+- **History and restore**: unit detail lists every saved version; restoring saves the old payload as the newest
+  version and brings back soft-removed media (refused once purged). This is the "file versioning so media can be
+  recovered" of CLIENT_GUIDE §8, made usable.
+- **Launch checklist**: `GET /api/admin/readiness` on the dashboard; build-time items are shared with the
+  prototype (`lib/readiness-config.ts`).
+- **Operator CLIs**: `npm run provision` (the ceremony from a terminal, dry run unless `--yes`, files mode 600)
+  and `npm run admin` (list / add / reset-password / reset-2fa / disable / enable, all audited).
+- **Legal pages**: the wording now lives in `content/legal.ts`; a section with text renders it, an empty one keeps
+  the placeholder. We still write none of it (O14).
+- Migration `0002_ops.sql`: `ops_runs` (last run of each scheduled task) and `media.original_deleted_at`. Additive.
+
+### D-084 · Deployment settings come from the environment; the defaults keep today's demo working
+`NEXT_PUBLIC_CHIP_DOMAIN`, `NEXT_PUBLIC_CODE_LENGTH`, `NEXT_PUBLIC_SUPPORT_EMAIL` and
+`NEXT_PUBLIC_SHOW_RECIPIENT_LINK` replace hard-coded values, so production is configured on the host with no code
+change. Unset, each keeps its current value (placeholder domain, 4-character codes, showcase link on), so Zeya's
+staging demo is unchanged by a redeploy. Production safety comes from the launch checklist (which flags each one),
+the batch screen's warning, and the provisioning CLI's refusal of the placeholder domain, rather than from changing
+defaults under a live demo. One code length per deployment: the HMAC is over the body, so mixing lengths would
+only add ambiguity. 8-character bodies are shown as two groups (`SAUD-3K7M-Q2XF`); the second group wraps on a
+phone, with the dash hanging in the gap so no line overflows at 320 px. Generated bodies never start with "SAUD",
+so typing the prefix into the boxes is always caught.
+
+### D-085 · Two Content-Security-Policies, and 'unsafe-eval' only for Spotify
+A nonce policy (ARCHITECTURE §9.3's plan for the admin) needs per-request rendering, which Cache Components' static
+shells rule out; so both policies are static headers. The public site allows `'unsafe-eval'` because Spotify's
+official iFrame API (loaded from `embed-cdn.spotifycdn.com`) is a webpack build that evaluates strings: without it
+the record can't follow the music. Found by `scripts/e2e.mjs`, which fails on any CSP violation. Per-page policies
+can't help: a page keeps the policy it loaded with through client-side navigation, and the sender's and recipient's
+pages link into each other. The admin, reached only from admin pages and showing no third-party content, gets a
+stricter policy (no eval, no third-party scripts, `frame-src 'none'`). Also: HSTS (no `preload` until the domain
+is final), `X-Frame-Options: DENY`, COOP, and `Referrer-Policy: no-referrer` on `/s/*`.
+
+### D-086 · Not done, on purpose
+- **No `proxy.ts` rewrite for upper-case `/T/` QR codes** (ARCHITECTURE §3.4): it would put a proxy hop in front of
+  every first tap, the most speed-sensitive request in the product. A fallback QR (O8, still open) must encode the
+  URL exactly as in the factory file (lower case).
+- **No server-rendered envelope contents to speed up the recipient page**: link-preview bots would read letters
+  (ARCHITECTURE §8). The speed budget is reported as not met, with the options (`LAUNCH_READINESS.md` §3).
+- **No automatic 2FA switch-on for staging**: `db:setup` doesn't generate `TOTP_ENC_KEY`, so Zeya isn't asked to
+  set up an authenticator on the demo without being told.
+
+### D-087 · Off-site backups: what B2 keeps of deleted files
+The nightly media copy never deletes (a write-only key, Object Lock). So that it doesn't keep what the app deletes
+for privacy: a B2 lifecycle rule hides `media/incoming/` (raw uploads, which may carry location data) 30 days
+after upload; an upload whose conversion failed is still in Supabase and is simply copied again. Files of purged
+stamps are removed from B2 by a quarterly step with the master key (`BACKUPS.md` §2). The Privacy Policy facts
+(HANDOVER §9) say so.
+
+### D-088 · Tooling
+- `vitest` for unit tests (`tests/`), with `server-only` aliased to an empty module.
+- `@types/node` follows the runtime (Node 24), which vitest 5 also requires.
+- `rolldown` is a direct, pinned dev dependency: npm (npm/cli#4828) kept dropping its platform bindings from the
+  lockfile when it was only transitive (through vite), which broke `vitest` here and would break `npm ci` on
+  Linux CI. Keep it at the version vite uses.
+- `scripts/test/storage-stub.mjs`: an in-memory Supabase Storage stand-in so CI runs the whole API against
+  PostgreSQL 15 with no cloud account. `scripts/api-smoke.mjs` and `scripts/e2e-api.mjs` create throwaway admins
+  when they can reach the database, so 2FA is exercised on every run and runs repeat cleanly.
+- `scripts/perf.mjs --slug` measures a real envelope on the real backend.
+
 ## Sender & recipient build + integration (2026-10-08)
 
 ### D-041 · Prototype media stored as bytes, not Blobs

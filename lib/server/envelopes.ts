@@ -7,13 +7,25 @@ import "server-only";
 import type postgres from "postgres";
 import { z } from "zod";
 import { site } from "@/config/site";
+import { summarise } from "@/lib/content-summary";
 import { appleEmbedUrl, parseSongLink, spotifyEmbedUrl } from "@/lib/parsing/songs";
 import { canonicalAppleUrl, cleanText, isAllowedArtworkUrl, spotifyTrackUrl } from "@/lib/services/api/song-providers";
-import type { AuditAction, ContentMap, ContentRecord, RecipientEnvelope, SenderEnvelope, StampContent, StampKind, UnitStatus } from "@/lib/services/types";
+import type {
+  AuditAction,
+  ContentMap,
+  ContentRecord,
+  ContentVersion,
+  RecipientEnvelope,
+  SenderEnvelope,
+  StampContent,
+  StampKind,
+  UnitStatus,
+} from "@/lib/services/types";
 import { STAMP_KINDS } from "@/lib/services/types";
 import { iso, isoReq, sql, type Tx } from "./db";
 import { ApiError } from "./http";
-import { objectKey, READ_TTL_SEC, signedReads } from "./storage";
+import { recordSong, withSongAvailability } from "./songs";
+import { READ_TTL_SEC, signedReads } from "./storage";
 
 /** The pool or an open transaction (a transaction is a Sql too). */
 type Db = ReturnType<typeof sql> | Tx;
@@ -94,25 +106,56 @@ export function mediaIdsOf(c: StampContent): string[] {
 
 export type MediaUrls = Record<string, { url: string; expiresAt: string }>;
 
-/** Signed read URLs for every ready media item the contents reference (wire-only `mediaUrls`). */
-export async function mediaUrlsFor(db: Db, unitId: string, map: ContentMap): Promise<MediaUrls> {
+/** The wire key for a photo's thumbnail in `mediaUrls` (the main file is under the bare id). */
+export const thumbUrlKey = (mediaId: string) => `${mediaId}:thumb`;
+
+interface ServedMedia {
+  urls: MediaUrls;
+  /** Voice notes being served as the normalised AAC/m4a (their `mime` is reported as such). */
+  audioIds: Set<string>;
+}
+
+/**
+ * Signed read URLs for every ready media item the contents reference (wire-only `mediaUrls`):
+ * the normalised file (display JPEG / AAC audio) under the media id, a photo's thumbnail under
+ * `{id}:thumb`, and the verified original only until normalisation has run.
+ */
+async function servedMedia(db: Db, unitId: string, map: ContentMap): Promise<ServedMedia> {
   const ids = Object.values(map).flatMap((r) => (r ? mediaIdsOf(r.content as StampContent) : []));
-  if (!ids.length) return {};
-  const rows = await db<{ id: string }[]>`
-    select id from media where unit_id = ${unitId} and id = any(${ids}) and state = 'ready'`;
-  const keys = rows.map((r) => objectKey(unitId, r.id));
-  const signed = await signedReads(keys);
+  if (!ids.length) return { urls: {}, audioIds: new Set() };
+  const rows = await db<{ id: string; kind: "photo" | "voice"; original_key: string; main_key: string | null; thumb_key: string | null }[]>`
+    select m.id, m.kind, m.original_key,
+      (select v.r2_key from media_variants v where v.media_id = m.id and v.variant in ('display', 'audio') order by v.version desc limit 1) as main_key,
+      (select v.r2_key from media_variants v where v.media_id = m.id and v.variant = 'thumb' order by v.version desc limit 1) as thumb_key
+    from media m where m.unit_id = ${unitId} and m.id = any(${ids}) and m.state = 'ready'`;
+  const signed = await signedReads(rows.flatMap((r) => [r.main_key ?? r.original_key, ...(r.thumb_key ? [r.thumb_key] : [])]));
   const expiresAt = new Date(Date.now() + READ_TTL_SEC * 1000).toISOString();
-  const out: MediaUrls = {};
+  const urls: MediaUrls = {};
+  const audioIds = new Set<string>();
   for (const r of rows) {
-    const url = signed.get(objectKey(unitId, r.id));
-    if (url) out[r.id] = { url, expiresAt };
+    const main = signed.get(r.main_key ?? r.original_key);
+    if (main) urls[r.id] = { url: main, expiresAt };
+    const thumb = r.thumb_key ? signed.get(r.thumb_key) : undefined;
+    if (thumb) urls[thumbUrlKey(r.id)] = { url: thumb, expiresAt };
+    if (r.kind === "voice" && r.main_key) audioIds.add(r.id);
   }
-  return out;
+  return { urls, audioIds };
+}
+
+/** Contents as served: song availability from the catalog, and the voice note's real format. */
+async function servedContents(db: Db, unitId: string): Promise<{ contents: ContentMap; mediaUrls: MediaUrls }> {
+  const raw = await currentContents(db, unitId);
+  const served = await servedMedia(db, unitId, raw);
+  let contents = await withSongAvailability(db, raw);
+  const voice = contents.voice;
+  if (voice && served.audioIds.has(voice.content.mediaId) && voice.content.mime !== "audio/mp4") {
+    contents = { ...contents, voice: { ...voice, content: { ...voice.content, mime: "audio/mp4" } } };
+  }
+  return { contents, mediaUrls: served.urls };
 }
 
 export async function senderEnvelope(db: Db, unit: UnitRow): Promise<SenderEnvelope & { mediaUrls: MediaUrls }> {
-  const contents = await currentContents(db, unit.id);
+  const { contents, mediaUrls } = await servedContents(db, unit.id);
   return {
     unit: {
       id: unit.id,
@@ -125,19 +168,19 @@ export async function senderEnvelope(db: Db, unit: UnitRow): Promise<SenderEnvel
       updatedAt: isoReq(unit.updated_at),
     },
     contents,
-    mediaUrls: await mediaUrlsFor(db, unit.id, contents),
+    mediaUrls,
   };
 }
 
 export async function recipientEnvelope(db: Db, unit: UnitRow): Promise<RecipientEnvelope & { mediaUrls: MediaUrls }> {
-  const contents = await currentContents(db, unit.id);
+  const { contents, mediaUrls } = await servedContents(db, unit.id);
   return {
     slug: unit.slug,
     status: unit.status,
     sealedAt: iso(unit.sealed_at),
     revealedAt: iso(unit.revealed_at),
     contents,
-    mediaUrls: await mediaUrlsFor(db, unit.id, contents),
+    mediaUrls,
   };
 }
 
@@ -270,6 +313,7 @@ export async function saveContent(t: Tx, unit: UnitRow, content: StampContent, b
     returning id, created_at`;
   const ids = [...new Set(mediaIdsOf(content))];
   for (const id of ids) await t`insert into content_media (content_id, media_id) values (${row.id}, ${id})`;
+  if (content.kind === "song") await recordSong(t, content);
   const map = await currentContents(t, unit.id);
   await t`update units set status = ${statusAfterEdit(unit.status, map)}, content_updated_at = now() where id = ${unit.id}`;
   return { unitId: unit.id, kind: content.kind, content, version, updatedAt: isoReq(row.created_at) } as ContentRecord;
@@ -284,4 +328,60 @@ export async function removeContent(t: Tx, unit: UnitRow, kind: StampKind, by: "
   const map = await currentContents(t, unit.id);
   await t`update units set status = ${statusAfterEdit(unit.status, map)}, content_updated_at = now() where id = ${unit.id}`;
   return rows.length > 0;
+}
+
+// ─── History and restore (CLIENT_GUIDE §8: replaced or removed content can be recovered) ──
+
+interface VersionRow {
+  kind: StampKind;
+  version: number;
+  payload: StampContent;
+  saved_by: "sender" | "admin";
+  created_at: Date;
+  superseded_at: Date | null;
+  removed_at: Date | null;
+  purged: boolean;
+}
+
+/** Every saved version of every stamp, newest first (at most `limit`). */
+export async function contentHistory(db: Db, unitId: string, limit = 100): Promise<ContentVersion[]> {
+  const rows = await db<VersionRow[]>`
+    select c.kind, c.version, c.payload, c.saved_by, c.created_at, c.superseded_at, c.removed_at,
+           exists (
+             select 1 from content_media cm join media m on m.id = cm.media_id
+             where cm.content_id = c.id and (m.purged_at is not null or m.state not in ('ready', 'removed'))
+           ) as purged
+    from contents c where c.unit_id = ${unitId}
+    order by c.created_at desc, c.version desc limit ${limit}`;
+  return rows.map((r) => ({
+    kind: r.kind,
+    version: r.version,
+    savedBy: r.saved_by,
+    savedAt: isoReq(r.created_at),
+    supersededAt: iso(r.superseded_at),
+    removedAt: iso(r.removed_at),
+    current: r.superseded_at === null && r.removed_at === null,
+    summary: summarise(r.payload),
+    restorable: !r.purged,
+  }));
+}
+
+/**
+ * Make version `version` of a stamp current again, as a new version saved by the admin. Media it
+ * references that was soft-deleted is brought back; media already purged (after the 90-day
+ * window) can't be, so such a version is refused. Caller holds the unit row lock.
+ */
+export async function restoreVersion(t: Tx, unit: UnitRow, kind: StampKind, version: number): Promise<ContentRecord> {
+  const [old] = await t<{ id: string; payload: StampContent; superseded_at: Date | null; removed_at: Date | null }[]>`
+    select id, payload, superseded_at, removed_at from contents where unit_id = ${unit.id} and kind = ${kind} and version = ${version}`;
+  if (!old) throw new ApiError("not_found", "no such version");
+  if (old.superseded_at === null && old.removed_at === null) throw new ApiError("invalid_input", "that version is already the current one");
+  const ids = mediaIdsOf(old.payload);
+  if (ids.length) {
+    const gone = await t`select id from media where id = any(${ids}) and (purged_at is not null or state not in ('ready', 'removed'))`;
+    if (gone.length) throw new ApiError("invalid_input", "its files were deleted for good after the 90-day recovery window");
+    await t`update media set state = 'ready', removed_at = null, removed_by = null, purge_after = null
+            where id = any(${ids}) and state = 'removed'`;
+  }
+  return saveContent(t, unit, old.payload, "admin");
 }

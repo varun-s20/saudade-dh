@@ -4,7 +4,8 @@
  * GET /api/t/{slug} has no side effects. The reveal is a separate POST, sent by the recipient
  * route only after "Tap to open" + the choreography (or Skip). If this device holds the sender
  * token for the slug (the sender testing their own ceramic), the token is attached and the server
- * records `sender_excluded` instead of consuming the first open.
+ * records `sender_excluded` instead of consuming the first open. The POST also carries this
+ * site's cookies, so an admin's packing-check tap is recorded as `admin_excluded`.
  */
 import type { RecipientEnvelope, RevealService } from "@/lib/services/types";
 import { idempotencyKey, ok, path, request, senderTokenForSlug } from "./http";
@@ -24,6 +25,7 @@ export const apiRevealService: RevealService = {
       body: { skipped: info.skipped, reducedMotion: info.reducedMotion },
       headers: { "idempotency-key": idempotencyKey() },
       auth: token ? { sender: token } : "none",
+      credentials: "same-origin",
       expect: "empty",
     });
   },

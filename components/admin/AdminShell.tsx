@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { Logo } from "@/components/ui/Logo";
-import { services } from "@/lib/services";
+import { dataSource, services } from "@/lib/services";
 import type { AdminSession } from "@/lib/services/types";
 import { cn } from "@/lib/utils/cn";
 import { Skeleton } from "./ui";
@@ -13,14 +13,20 @@ const NAV = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/units", label: "Units" },
   { href: "/admin/batch", label: "Batches" },
+  { href: "/admin/security", label: "Security" },
 ] as const;
+
+const SECURITY = "/admin/security";
 
 /**
  * Signed-in admin console frame: header, navigation, and the session guard.
- * Children are shown only once a session is confirmed; otherwise we redirect to /admin.
+ * Children are shown only once a session is confirmed; otherwise we redirect to /admin. A session
+ * that still has to set up two-factor sign-in (`enrol`) is held on the Security page.
  */
 export function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter();
+  // Read through <PathWatch> inside Suspense (dynamic segments below; Cache Components rule).
+  const [pathname, setPathname] = useState<string | null>(null);
   const [session, setSession] = useState<AdminSession | null>(null);
 
   useEffect(() => {
@@ -35,6 +41,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
     };
   }, [router]);
 
+  const enrolling = session?.twoFactor === "enrol";
+  useEffect(() => {
+    if (enrolling && pathname !== null && pathname !== SECURITY) router.replace(SECURITY);
+  }, [enrolling, pathname, router]);
+  const ready = Boolean(session) && (!enrolling || pathname === SECURITY);
+
   const signOut = async () => {
     await services.admin.signOut();
     // Full load on purpose: clears every preserved (Activity) admin screen and its state, as
@@ -45,15 +57,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-dvh flex-col">
+      <Suspense fallback={null}>
+        <PathWatch onPath={setPathname} />
+      </Suspense>
       <header className="sticky top-0 z-(--z-header) border-b-2 border-admin-ink bg-admin-surface">
         <div className="mx-auto flex max-w-(--measure-admin) items-center gap-3 px-4 py-2.5 md:gap-8 md:px-8">
           <div className="flex items-baseline gap-2">
             <Logo href="/admin/dashboard" size="sm" />
             <span className="postal-label text-admin-ink-soft">Admin</span>
           </div>
-          <Suspense fallback={<NavLinks active={null} className="hidden md:flex" />}>
-            <ActiveNav className="hidden md:flex" />
-          </Suspense>
+          {!enrolling && (
+            <Suspense fallback={<NavLinks active={null} className="hidden md:flex" />}>
+              <ActiveNav className="hidden md:flex" />
+            </Suspense>
+          )}
           <div className="ml-auto flex items-center gap-2">
             {session ? (
               <span className="hidden max-w-56 truncate text-sm text-admin-ink-soft lg:inline" title={session.email}>
@@ -73,24 +90,33 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </div>
         </div>
         {/* Phone: tabs under the header */}
-        <Suspense fallback={<NavLinks active={null} className="flex border-t border-admin-line px-2 md:hidden" tabs />}>
-          <ActiveNav className="flex border-t border-admin-line px-2 md:hidden" tabs />
-        </Suspense>
+        {!enrolling && (
+          <Suspense fallback={<NavLinks active={null} className="flex border-t border-admin-line px-2 md:hidden" tabs />}>
+            <ActiveNav className="flex border-t border-admin-line px-2 md:hidden" tabs />
+          </Suspense>
+        )}
       </header>
 
       <main id="main" className="mx-auto w-full max-w-(--measure-admin) flex-1 px-4 py-6 md:px-8 md:py-8">
         {/* The page segment always renders (Next validates instant navigation per segment); it stays
             hidden behind a skeleton until the session is confirmed. Its service calls fail with
             `unauthorized` for signed-out visitors, so nothing is exposed meanwhile. */}
-        <div hidden={!session}>{children}</div>
-        {!session && <ConsoleSkeleton />}
+        <div hidden={!ready}>{children}</div>
+        {!ready && <ConsoleSkeleton />}
       </main>
 
       <footer className="mx-auto w-full max-w-(--measure-admin) px-4 pb-6 text-xs text-admin-ink-soft md:px-8">
-        Saudade admin · simulated data in this prototype
+        {dataSource === "mock" ? "Saudade admin · simulated data in this prototype" : "Saudade admin"}
       </footer>
     </div>
   );
+}
+
+/** Reports the current path to the shell (rendered inside Suspense). */
+function PathWatch({ onPath }: { onPath: (path: string) => void }) {
+  const path = usePathname();
+  useEffect(() => onPath(path), [path, onPath]);
+  return null;
 }
 
 function ActiveNav({ className, tabs }: { className?: string; tabs?: boolean }) {

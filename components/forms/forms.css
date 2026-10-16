@@ -206,6 +206,45 @@
     user-select: none;
   }
 
+  /* 8-character codes: two groups of four. Each group is as wide as the 4-character row, so on a
+   * phone the second group wraps under the first; from about 30rem up they share one line. The
+   * dash between them hangs in the gap (no width of its own), so a wrapped line never overflows. */
+  .sd-code__groups {
+    --sd-code-gap: clamp(1rem, 4.5vw, 1.5rem);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--sd-code-gap);
+    row-gap: 0.75rem;
+    min-width: 0;
+  }
+  .sd-code__group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: clamp(0.375rem, 2.2vw, 0.625rem);
+  }
+  /* With two groups the row can be two lines tall: keep "SAUD-" level with the first group. */
+  .sd-code__row[data-groups="2"] {
+    align-items: flex-start;
+  }
+  .sd-code__row[data-groups="2"] .sd-code__prefix {
+    display: flex;
+    align-items: center;
+    height: clamp(3rem, 16.5vw, 4.5rem);
+  }
+  .sd-code__dash {
+    position: absolute;
+    inset-inline-end: 100%;
+    width: var(--sd-code-gap);
+    text-align: center;
+    font-family: var(--ff-postal);
+    font-size: min(clamp(1.45rem, 7vw, 2rem), 8cqi);
+    font-weight: 700;
+    color: var(--ink);
+    user-select: none;
+  }
+
   .sd-code__box {
     width: min(clamp(2.85rem, 13.5vw, 3.75rem), 15.5cqi);
     height: clamp(3rem, 16.5vw, 4.5rem);

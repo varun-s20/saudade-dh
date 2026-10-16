@@ -7,26 +7,35 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "db:setup": "node scripts/db-setup.mjs",
     "api:smoke": "node scripts/api-smoke.mjs",
-    "api:e2e": "node scripts/e2e-api.mjs"
+    "api:e2e": "node scripts/e2e-api.mjs",
+    "provision": "node scripts/provision.mjs",
+    "admin": "node scripts/admin-user.mjs",
+    "storage:stub": "node scripts/test/storage-stub.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.1",
     "browser-image-compression": "^2.0.2",
+    "ffmpeg-static": "5.3.0",
     "idb-keyval": "^6.3.0",
     "lenis": "1.3.26",
     "motion": "^14.0.0",
     "next": "16.4.0",
     "postgres": "3.4.9",
+    "qrcode": "1.5.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "sharp": "0.35.5",
     "zod": "4.6.5",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
-    "@types/node": "^20",
+    "@types/node": "^24.19.2",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "axe-core": "^4.14.0",
@@ -35,7 +44,9 @@
     "playwright-core": "^1.57.0",
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
+    "rolldown": "1.2.14",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.5"
   }
 }

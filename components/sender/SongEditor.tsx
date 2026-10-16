@@ -288,6 +288,17 @@ function SongBody({ token, env, refresh }: { token: string; env: SenderEnvelope;
         />
       ) : null}
 
+      {/* The nightly check found the saved track gone from the provider (ARCHITECTURE.md §11). */}
+      {saved?.unavailable && song?.trackId === saved.trackId && (
+        <p role="status" className="mt-4 flex items-start gap-2 rounded-soft border-2 border-ink bg-ochre/30 px-4 py-3 text-ink">
+          <IconWarning size={18} className="mt-0.5 shrink-0" />
+          <span>
+            This song is no longer on {saved.provider === "apple" ? "Apple Music" : "Spotify"}, so it can&apos;t play. They&apos;ll see its title on the record. Paste a
+            link to another song to replace it.
+          </span>
+        </p>
+      )}
+
       <p className="mt-5 text-sm leading-relaxed text-ink-faded">
         Listeners who aren&apos;t logged in to Spotify or Apple Music hear a 30-second preview.
       </p>

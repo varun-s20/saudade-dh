@@ -3,22 +3,37 @@
  *
  *   npm run build && npx next start -p 3200      (in another terminal, with .env.local set)
  *   npm run api:smoke -- --base http://localhost:3200
- *   … --skip-media     database-only run (no Supabase Storage): skips uploads and signed URLs
+ *   … --env-file <file>  read ADMIN_*, DATABASE_URL, CRON_SECRET… from another env file
+ *   … --skip-media       database-only run (no Supabase Storage): skips uploads and signed URLs
+ *   … --breaker          also trip the claim breaker (300 failed claims) and pass the Turnstile
+ *                        check. Local/CI databases only: it blocks plain claims for 6 hours.
  *
- * Creates its own small batch (so the demo codes are never used up), then walks the whole life of
- * an envelope: claim → upload to Storage → four stamps → seal → recipient open → reveal (once) →
- * admin tools. Every step is a PASS/FAIL line; exits non-zero on any failure.
+ * Creates its own small batches (so the demo codes are never used up), then walks the whole life
+ * of an envelope: claim → upload to Storage → normalised photos and voice → four stamps → seal →
+ * recipient open → reveal (once) → admin tools, history and restore, batch lifecycle, the launch
+ * checklist and the scheduled jobs. Every step is a PASS/FAIL line; exits non-zero on any failure.
+ *
+ * Admin sign-in: with DATABASE_URL available the script creates a throwaway admin for the run (so
+ * two-factor sign-in can be enrolled and exercised every time) and disables it at the end;
+ * otherwise it signs in as ADMIN_EMAIL / ADMIN_PASSWORD.
  */
+import { execFileSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import fs from "node:fs";
+import { createRequire } from "node:module";
+import os from "node:os";
 import path from "node:path";
+import { connect, tempAdmin as makeTempAdmin, totp } from "./lib/ops-common.mjs";
 
+const require = createRequire(import.meta.url);
 const args = process.argv.slice(2);
 const opt = (n, d) => (args.includes(`--${n}`) ? args[args.indexOf(`--${n}`) + 1] : d);
 const BASE = opt("base", "http://localhost:3200").replace(/\/+$/, "");
 const envFile = opt("env-file", path.join(process.cwd(), ".env.local"));
 if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
 const SKIP_MEDIA = args.includes("--skip-media");
-const ADMIN = { email: (process.env.ADMIN_EMAIL || "zeya@saudade.example").toLowerCase(), password: process.env.ADMIN_PASSWORD };
+const BREAKER = args.includes("--breaker");
+const CRON = process.env.CRON_SECRET?.trim();
 
 let passed = 0;
 let failed = 0;
@@ -52,37 +67,98 @@ async function call(method, p, { body, token, admin, raw, headers = {} } = {}) {
   return { status: res.status, data };
 }
 
-async function upload(token, file, meta) {
-  const bytes = fs.readFileSync(file);
+async function uploadBytes(token, bytes, meta) {
   const t = await call("POST", "/api/sender/media/uploads", { token, body: { ...meta, bytes: bytes.length } });
   if (t.status !== 201) return { ticket: t };
   const put = await fetch(t.data.upload.url, { method: "PUT", headers: t.data.upload.headers, body: bytes });
   const done = await call("POST", `/api/sender/media/${t.data.mediaId}/complete`, { token });
   return { ticket: t, put, done, mediaId: t.data.mediaId };
 }
+const upload = (token, file, meta) => uploadBytes(token, fs.readFileSync(file), meta);
+
+// ─── Audio fixtures (made with the bundled ffmpeg) ───────────────────────────
+
+function makeAudio(name, ffArgs) {
+  const out = path.join(os.tmpdir(), `saudade-smoke-${process.pid}-${name}`);
+  execFileSync(require("ffmpeg-static"), ["-hide_banner", "-loglevel", "error", "-y", ...ffArgs, out]);
+  return out;
+}
+
+// ─── A throwaway admin (when the database is reachable) ──────────────────────
+
+let db = null;
+let tempAdmin = null;
+async function adminCredentials() {
+  if (!process.env.DATABASE_URL) return { email: (process.env.ADMIN_EMAIL || "zeya@saudade.example").toLowerCase(), password: process.env.ADMIN_PASSWORD };
+  db = connect();
+  tempAdmin = await makeTempAdmin(db, "smoke");
+  return { email: tempAdmin.email, password: tempAdmin.password };
+}
 
 try {
   const health = await call("GET", "/api/health");
-  check("health: database reachable", health.status === 200 && health.data?.db === true, JSON.stringify(health.data));
+  check("health: database reachable, version reported", health.status === 200 && health.data?.db === true && typeof health.data?.version === "string", JSON.stringify(health.data));
 
-  // ── Admin: sign in, make a fresh batch of 3 ──────────────────────────────
+  // ── Admin: sign in (and two-factor, when the deployment requires it) ─────
+  const ADMIN = await adminCredentials();
   check(
     "admin: wrong password refused",
     (await call("POST", "/api/admin/session", { admin: true, body: { email: ADMIN.email, password: "definitely-wrong" } })).status === 401,
   );
   const signin = await call("POST", "/api/admin/session", { admin: true, body: ADMIN });
   check("admin: sign in", signin.status === 200 && signin.data?.email === ADMIN.email, `status ${signin.status}`);
+
+  if (signin.data?.twoFactor === "enrol") {
+    check("2fa: an un-enrolled session can't use the panel (403)", (await call("GET", "/api/admin/stats", { admin: true })).status === 403);
+    const sec = await call("GET", "/api/admin/2fa", { admin: true });
+    check("2fa: status says not enrolled", sec.data?.twoFactor === "not_enrolled");
+    const setup = await call("POST", "/api/admin/2fa/setup", { admin: true });
+    check("2fa: setup returns a secret, otpauth link and QR", setup.status === 200 && /^[A-Z2-7]{32}$/.test(setup.data?.secret ?? "") && setup.data?.qrDataUrl?.startsWith("data:image/png"));
+    check(
+      "2fa: a wrong first code is refused",
+      (await call("POST", "/api/admin/2fa/confirm", { admin: true, body: { pending: setup.data.pending, code: "000000" === totp(setup.data.secret) ? "111111" : "000000" } })).status === 400,
+    );
+    check(
+      "2fa: a tampered pending token is refused",
+      (await call("POST", "/api/admin/2fa/confirm", { admin: true, body: { pending: `${setup.data.pending.slice(0, -2)}AA`, code: totp(setup.data.secret) } })).status === 400,
+    );
+    const firstCode = totp(setup.data.secret);
+    const confirm = await call("POST", "/api/admin/2fa/confirm", { admin: true, body: { pending: setup.data.pending, code: firstCode } });
+    check("2fa: confirm → 10 recovery codes", confirm.status === 200 && confirm.data?.recoveryCodes?.length === 10);
+    check("2fa: …and this session now opens the panel", (await call("GET", "/api/admin/stats", { admin: true })).status === 200);
+    await call("DELETE", "/api/admin/session", { admin: true });
+    cookie = "";
+    const noOtp = await call("POST", "/api/admin/session", { admin: true, body: ADMIN });
+    check("2fa: right password without a code → 401 otp_required", noOtp.status === 401 && noOtp.data?.detail === "otp_required");
+    check("2fa: the enrolment code can't be replayed", (await call("POST", "/api/admin/session", { admin: true, body: { ...ADMIN, otp: firstCode } })).data?.detail === "invalid_otp");
+    const [rc] = confirm.data.recoveryCodes;
+    const viaRecovery = await call("POST", "/api/admin/session", { admin: true, body: { ...ADMIN, otp: rc.toUpperCase() } });
+    check("2fa: a recovery code signs in (any case)", viaRecovery.status === 200 && viaRecovery.data?.twoFactor === "verified");
+    const keepCookie = cookie;
+    check("2fa: …and only once", (await call("POST", "/api/admin/session", { admin: true, body: { ...ADMIN, otp: rc } })).data?.detail === "invalid_otp");
+    cookie = keepCookie;
+    check("2fa: recovery codes left = 9", (await call("GET", "/api/admin/2fa", { admin: true })).data?.recoveryCodesLeft === 9);
+    // Four strikes were spent above (wrong-first-code doesn't count); clear them so the lock-out never trips mid-run.
+    if (db) await db`update admin_users set failed_sign_ins = 0 where email = ${ADMIN.email}`;
+  } else {
+    check("2fa: off on this deployment (TOTP_ENC_KEY unset)", signin.data?.twoFactor === "off");
+  }
+
   check(
     "admin: CSRF header required",
     (await fetch(`${BASE}/api/admin/batches`, { method: "POST", headers: { cookie, "content-type": "application/json" }, body: "{}" })).status === 403,
   );
   const batch = await call("POST", "/api/admin/batches", { admin: true, body: { count: 3, label: `Smoke ${new Date().toISOString().slice(0, 16)}` } });
   check("admin: generate batch of 3 (codes returned once)", batch.status === 201 && batch.data?.rows?.length === 3, `status ${batch.status}`);
+  check(
+    "admin: the batch records its code length and chip domain",
+    batch.data?.batch?.status === "generated" && batch.data.batch.codeLength >= 4 && typeof batch.data.batch.chipDomain === "string",
+  );
   const [r1, r2, r3] = batch.data.rows;
 
   // ── Claim ─────────────────────────────────────────────────────────────────
   check("claim: unknown code → 422 invalid_code", (await call("POST", "/api/claim", { body: { code: "SAUD-ZZZZ" } })).data?.code === "invalid_code");
-  const claim = await call("POST", "/api/claim", { body: { code: r1.code.toLowerCase().replace("-", " ") } });
+  const claim = await call("POST", "/api/claim", { body: { code: r1.code.toLowerCase().replaceAll("-", " ") } });
   check("claim: fresh code (any case/spacing) → token", claim.status === 200 && /^[a-z2-7]{32}$/.test(claim.data?.token ?? ""), `status ${claim.status}`);
   const token = claim.data.token;
   check("claim: same code again → 409 already_claimed", (await call("POST", "/api/claim", { body: { code: r1.code } })).data?.code === "already_claimed");
@@ -91,21 +167,31 @@ try {
   check("sender: envelope loads, status claimed", env.status === 200 && env.data?.unit?.status === "claimed");
   check("sender: unknown token → 404", (await call("GET", "/api/sender/envelope", { token: "a".repeat(32) })).status === 404);
 
-  // ── Media: straight to Storage, verified on complete ─────────────────────
+  // ── Media: straight to Storage, verified and normalised on complete ──────
   const STAMPS = SKIP_MEDIA ? 2 : 4;
   let photo = {};
   let voice = {};
   if (!SKIP_MEDIA) {
     photo = await upload(token, "public/demo/photos/01.jpg", { kind: "photo", mime: "image/jpeg", width: 1600, height: 1067 });
     check("media: photo upload ticket", photo.ticket.status === 201);
-    check("media: PUT to Supabase Storage", photo.put?.ok === true, `status ${photo.put?.status}`);
-    check("media: photo verified (magic bytes) → ready", photo.done?.status === 200 && photo.done.data?.kind === "photo");
-    voice = await upload(token, "public/demo/voice/mira-voice.m4a", { kind: "voice", mime: "audio/mp4", durationSec: 68 });
-    check("media: voice verified → ready", voice.done?.status === 200 && voice.done.data?.kind === "voice");
-    fs.writeFileSync(path.join(process.cwd(), ".e2e-fake.jpg"), "<html>not a photo</html>");
-    const fake = await upload(token, ".e2e-fake.jpg", { kind: "photo", mime: "image/jpeg", width: 10, height: 10 });
-    fs.rmSync(path.join(process.cwd(), ".e2e-fake.jpg"));
+    check("media: PUT to Storage", photo.put?.ok === true, `status ${photo.put?.status}`);
+    check("media: photo verified and normalised → ready", photo.done?.status === 200 && photo.done.data?.kind === "photo" && photo.done.data?.width > 0);
+
+    const webm = makeAudio("voice.webm", ["-f", "lavfi", "-i", "sine=frequency=330:duration=4", "-c:a", "libopus", "-b:a", "32k"]);
+    voice = await upload(token, webm, { kind: "voice", mime: "audio/webm;codecs=opus", durationSec: 99 });
+    check("media: Android-style WebM/Opus voice note → ready", voice.done?.status === 200 && voice.done.data?.kind === "voice");
+    check("media: …its duration is measured by the server, not taken from the browser", Math.abs((voice.done?.data?.durationSec ?? 0) - 4) < 0.6, `${voice.done?.data?.durationSec}s`);
+
+    const long = makeAudio("long.webm", ["-f", "lavfi", "-i", "anullsrc=r=8000:cl=mono", "-t", "186", "-c:a", "libopus", "-b:a", "6k"]);
+    const tooLong = await upload(token, long, { kind: "voice", mime: "audio/webm", durationSec: 30 });
+    check("media: a voice note over 3:00 is refused even if the browser says 30 s", tooLong.done?.status === 422 && tooLong.done.data?.code === "too_long");
+    for (const f of [webm, long]) fs.rmSync(f, { force: true });
+
+    const fake = await uploadBytes(token, Buffer.from("<html>not a photo</html>"), { kind: "photo", mime: "image/jpeg", width: 10, height: 10 });
     check("media: a non-image disguised as JPEG is rejected", fake.done?.status === 422 && fake.done.data?.code === "upload_failed");
+    const broken = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), randomBytes(4000)]);
+    const corrupt = await uploadBytes(token, broken, { kind: "photo", mime: "image/jpeg", width: 10, height: 10 });
+    check("media: a JPEG header on garbage is rejected by the decoder", corrupt.done?.status === 422 && corrupt.done.data?.code === "upload_failed");
   }
   check(
     "media: too large refused before upload",
@@ -145,7 +231,7 @@ try {
       (
         await call("PUT", "/api/sender/contents/voice", {
           token,
-          body: { kind: "voice", mediaId: voice.mediaId, durationSec: 68, mime: "audio/mp4", peaks: [0.2, 0.5, 0.9], source: "uploaded" },
+          body: { kind: "voice", mediaId: voice.mediaId, durationSec: 4, mime: "audio/webm", peaks: [0.2, 0.5, 0.9], source: "recorded" },
         })
       ).status === 200,
     );
@@ -176,17 +262,26 @@ try {
     rec.status === 200 && Object.keys(rec.data?.contents ?? {}).length === STAMPS && rec.data?.revealedAt === null,
   );
   if (!SKIP_MEDIA) {
-    const signedUrl = rec.data?.mediaUrls?.[photo.mediaId]?.url;
-    const img = signedUrl ? await fetch(signedUrl) : null;
-    check("recipient: photo loads from a signed Storage URL", img?.ok === true && (img.headers.get("content-type") ?? "").startsWith("image/"));
+    const main = rec.data?.mediaUrls?.[photo.mediaId]?.url;
+    const img = main ? await fetch(main) : null;
+    check("recipient: photo served as the normalised display JPEG", img?.ok === true && img.headers.get("content-type") === "image/jpeg" && main.includes("/media/"));
+    const thumbUrl = rec.data?.mediaUrls?.[`${photo.mediaId}:thumb`]?.url;
+    const thumb = thumbUrl ? await fetch(thumbUrl) : null;
+    check("recipient: a WebP thumbnail is signed alongside it", thumb?.ok === true && thumb.headers.get("content-type") === "image/webp");
+    check("recipient: the voice note is reported and served as AAC/m4a", rec.data?.contents?.voice?.content?.mime === "audio/mp4");
+    const audioUrl = rec.data?.mediaUrls?.[voice.mediaId]?.url;
+    const audio = audioUrl ? await fetch(audioUrl) : null;
+    check("recipient: …and the file is audio/mp4", audio?.ok === true && audio.headers.get("content-type") === "audio/mp4");
   }
   check("recipient: GET has no side effects", (await call("GET", `/api/t/${slug}`)).data?.revealedAt === null);
   check("recipient: unknown slug → 404", (await call("GET", "/api/t/zzzzzzzzzzzz")).status === 404);
 
-  const rv = (tok) =>
-    call("POST", `/api/t/${slug}/reveal`, { token: tok, body: { skipped: false, reducedMotion: false }, headers: { "idempotency-key": crypto.randomUUID() } });
+  const rv = (tok, extra = {}) =>
+    call("POST", `/api/t/${slug}/reveal`, { token: tok, body: { skipped: false, reducedMotion: false }, headers: { "idempotency-key": crypto.randomUUID() }, ...extra });
   check("reveal: from the sender's own device → 204", (await rv(token)).status === 204);
   check("reveal: …and the first open is NOT used up", (await call("GET", `/api/t/${slug}`)).data?.revealedAt === null);
+  check("reveal: an admin's packing-check tap → 204", (await rv(undefined, { admin: true })).status === 204);
+  check("reveal: …and the first open is still NOT used up", (await call("GET", `/api/t/${slug}`)).data?.revealedAt === null);
   check("reveal: recipient → 204", (await rv(undefined)).status === 204);
   rec = await call("GET", `/api/t/${slug}`);
   check("reveal: recorded once (status revealed)", rec.data?.status === "revealed" && rec.data?.revealedAt !== null);
@@ -196,7 +291,17 @@ try {
   );
   if (!SKIP_MEDIA) {
     const redirect = await call("GET", `/api/media/${photo.mediaId}`, { raw: true });
-    check("media: /api/media/{id} → 302 signed URL", redirect.status === 302 && (redirect.headers.get("location") ?? "").includes("/storage/v1/object/sign/"));
+    check("media: /api/media/{id} → 302 to the display file", redirect.status === 302 && (redirect.headers.get("location") ?? "").includes("display.jpg"));
+    const thumbRedirect = await call("GET", `/api/media/${photo.mediaId}?v=thumb`, { raw: true });
+    check("media: /api/media/{id}?v=thumb → 302 to the thumbnail", thumbRedirect.status === 302 && (thumbRedirect.headers.get("location") ?? "").includes("thumb.webp"));
+  }
+
+  // ── Song health (needs the database to simulate the provider dropping the track) ──
+  if (db) {
+    await db`update song_catalog set available = false, unavailable_since = now() where provider = 'spotify' and track_id = '6dGnYIeXmHdcikdzNNDMm2'`;
+    check("song: a track the provider dropped shows as unavailable", (await call("GET", `/api/t/${slug}`)).data?.contents?.song?.content?.unavailable === true);
+    await db`update song_catalog set available = true, unavailable_since = null where provider = 'spotify' and track_id = '6dGnYIeXmHdcikdzNNDMm2'`;
+    check("song: …and plays again when it comes back", !(await call("GET", `/api/t/${slug}`)).data?.contents?.song?.content?.unavailable);
   }
 
   // ── Admin tools ──────────────────────────────────────────────────────────
@@ -207,6 +312,18 @@ try {
   const unitId = found.data.items[0].id;
   const detail = await call("GET", `/api/admin/units/${unitId}`, { admin: true });
   check("admin: unit detail (1 reveal, audit trail)", detail.status === 200 && detail.data?.reveals?.length === 1 && detail.data?.audit?.length >= 6);
+  const letters = (detail.data?.history ?? []).filter((v) => v.kind === "letter");
+  check("admin: history lists both letter versions, the newest current", letters.length === 2 && letters[0].version === 2 && letters[0].current && !letters[1].current && letters[1].restorable);
+  check(
+    "admin: restore letter v1",
+    (await call("POST", `/api/admin/units/${unitId}/contents/letter/restore`, { admin: true, body: { version: 1 } })).status === 204,
+  );
+  rec = await call("GET", `/api/t/${slug}`);
+  check("admin: …the recipient sees v1's words again, saved as v3", rec.data?.contents?.letter?.content?.body === "Hello from the smoke test." && rec.data.contents.letter.version === 3);
+  check(
+    "admin: restoring the current version is refused",
+    (await call("POST", `/api/admin/units/${unitId}/contents/letter/restore`, { admin: true, body: { version: 3 } })).status === 400,
+  );
   check("admin: reset reveal", (await call("POST", `/api/admin/units/${unitId}/reset-reveal`, { admin: true })).status === 204);
   rec = await call("GET", `/api/t/${slug}`);
   check("admin: …the next tap plays the first-tap again", rec.data?.status === "sealed" && rec.data?.revealedAt === null);
@@ -226,7 +343,42 @@ try {
   const csv = await call("GET", `/api/admin/batches/${batch.data.batch.id}/export.csv`, { admin: true, raw: true });
   const csvText = await csv.text();
   check("admin: factory CSV (no codes in it)", csv.status === 200 && csvText.startsWith("unit_no,slug,url,ndef_bytes") && !csvText.includes(r3.code));
+  check("admin: …URLs on the batch's own chip domain", csvText.includes(`https://${batch.data.batch.chipDomain}/t/`));
   check("admin: remove a stamp (support)", (await call("DELETE", `/api/admin/units/${unitId}/contents/song`, { admin: true })).status === 204);
+
+  // ── Batch lifecycle ──────────────────────────────────────────────────────
+  check(
+    "batch: a batch with claimed codes can't be voided",
+    (await call("POST", `/api/admin/batches/${batch.data.batch.id}/void`, { admin: true })).status === 409,
+  );
+  const spare = await call("POST", "/api/admin/batches", { admin: true, body: { count: 2, label: "Smoke spare" } });
+  const voided = await call("POST", `/api/admin/batches/${spare.data.batch.id}/void`, { admin: true });
+  check("batch: an unclaimed batch is voided", voided.status === 200 && voided.data?.status === "void");
+  check("batch: …and its codes no longer claim", (await call("POST", "/api/claim", { body: { code: spare.data.rows[0].code } })).data?.code === "invalid_code");
+  check("batch: a void batch can't be marked encoded", (await call("POST", `/api/admin/batches/${spare.data.batch.id}/encoded`, { admin: true })).status === 409);
+  const encoded = await call("POST", `/api/admin/batches/${batch.data.batch.id}/encoded`, { admin: true });
+  check("batch: mark encoded", encoded.status === 200 && encoded.data?.status === "encoded" && encoded.data.encodedAt);
+  check("batch: an encoded batch can never be voided", (await call("POST", `/api/admin/batches/${batch.data.batch.id}/void`, { admin: true })).status === 409);
+  const list = await call("GET", "/api/admin/batches", { admin: true });
+  check("batch: list shows status and claim counts", list.data?.find((b) => b.id === batch.data.batch.id)?.claimedCount === 2);
+
+  // ── Scheduled jobs and the launch checklist ──────────────────────────────
+  check("cron: refused without the secret", (await call("GET", "/api/cron/daily")).status === 401);
+  if (CRON) {
+    const auth = { authorization: `Bearer ${CRON}` };
+    const daily = await call("GET", "/api/cron/daily", { headers: auth });
+    check("cron: nightly run completes", daily.status === 200 && daily.data?.ok === true, JSON.stringify(daily.data?.errors ?? daily.data));
+    check("cron: jobs sweep", (await call("GET", "/api/cron/jobs", { headers: auth })).status === 200);
+    check(
+      "cron: the backup workflow can report in",
+      (await call("POST", "/api/cron/backup-report", { headers: auth, body: { ok: true, summary: { units: 3, dbBytes: 1234 } } })).status === 204,
+    );
+  }
+  const ready = await call("GET", "/api/admin/readiness", { admin: true });
+  const byId = Object.fromEntries((ready.data?.checks ?? []).map((c) => [c.id, c]));
+  check("readiness: the launch checklist answers", ready.status === 200 && ready.data?.checks?.length >= 10);
+  check("readiness: chip domain and email are checked", Boolean(byId.chip_domain && byId.email));
+  if (CRON) check("readiness: …nightly jobs and backups show as done", byId.cron?.status === "ok" && byId.backup?.status === "ok");
 
   // ── Recovery ─────────────────────────────────────────────────────────────
   check(
@@ -236,11 +388,27 @@ try {
   check("recover: always 202 (known email)", (await call("POST", "/api/recover", { body: { email: "mira@example.com" } })).status === 202);
   check("recover: always 202 (unknown email: no enumeration)", (await call("POST", "/api/recover", { body: { email: "nobody@example.com" } })).status === 202);
 
+  // ── The claim breaker (opt-in: needs Turnstile's test keys on the server) ─
+  if (BREAKER) {
+    for (let i = 0; i < 301; i++) {
+      await call("POST", "/api/claim", { body: { code: "SAUD-ZZZZ" }, headers: { "x-forwarded-for": `198.51.100.${i % 250}, 10.0.0.${Math.floor(i / 250)}` } });
+    }
+    const blocked = await call("POST", "/api/claim", { body: { code: r3.code }, headers: { "x-forwarded-for": "203.0.113.9" } });
+    check("breaker: after 300 failures every claim needs the bot check", blocked.status === 403 && blocked.data?.code === "challenge_required");
+    const passedCheck = await call("POST", "/api/claim", { body: { code: r3.code, turnstileToken: "XXXX.DUMMY.TOKEN.XXXX" }, headers: { "x-forwarded-for": "203.0.113.9" } });
+    check("breaker: …and a passed check claims", passedCheck.status === 200);
+  }
+
   check("admin: sign out", (await call("DELETE", "/api/admin/session", { admin: true })).status === 204);
   check("admin: …session gone", (await call("GET", "/api/admin/session", { admin: true })).status === 401);
 } catch (e) {
   failed++;
   console.log(`FAIL crashed: ${e instanceof Error ? e.stack : e}`);
+} finally {
+  if (db) {
+    if (tempAdmin) await tempAdmin.disable();
+    await db.end();
+  }
 }
 
 console.log(`\n${passed}/${passed + failed} checks passed.`);

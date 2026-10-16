@@ -1,0 +1,126 @@
+# ════════════════════════════════════════════════════════════════════════════
+# SAUDADE · continuous integration
+#
+#   checks  lint, typecheck, unit tests (vitest), production build of the prototype (mock data)
+#   api     the real backend end to end: PostgreSQL 15 prepared like Supabase, the in-memory Storage
+#           stand-in (scripts/test/storage-stub.mjs), migrations, a production build with
+#           NEXT_PUBLIC_DATA_SOURCE=api, then scripts/api-smoke.mjs: claim, uploads and media
+#           normalisation, stamps, seal, reveal, admin with two-factor sign-in, batches, history,
+#           the scheduled jobs and the claim breaker with Turnstile's public test keys.
+#
+# No repository secrets are needed: every secret is generated for the run and thrown away.
+# ════════════════════════════════════════════════════════════════════════════
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  checks:
+    name: Lint, types, unit tests, build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Build (prototype, mock data)
+        run: npm run build
+
+  api:
+    name: Backend end to end
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: Prepare the database like Supabase (roles and the extensions schema)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 \
+            -c "create role anon nologin" -c "create role authenticated nologin" -c "create schema extensions"
+
+      - name: Test environment (secrets made for this run only)
+        run: |
+          set -euo pipefail
+          hex() { openssl rand -hex 32; }
+          cat > .env.ci <<EOF
+          NEXT_PUBLIC_DATA_SOURCE=api
+          SUPABASE_URL=http://127.0.0.1:54330
+          SUPABASE_SERVICE_ROLE_KEY=ci-stub
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
+          SUPABASE_MEDIA_BUCKET=media
+          CODE_PEPPER_V1=$(hex)
+          IP_HASH_KEY=$(hex)
+          TOTP_ENC_KEY=$(hex)
+          CRON_SECRET=$(openssl rand -base64 24 | tr -d '/+=')
+          ADMIN_EMAIL=ci-admin@example.com
+          ADMIN_PASSWORD=$(openssl rand -base64 18 | tr -d '/+=')
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+          TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+          EOF
+          sed -i 's/^ *//' .env.ci
+          # Every later step sees these too (masked in the log).
+          while IFS='=' read -r k v; do echo "::add-mask::$v"; echo "$k=$v" >> "$GITHUB_ENV"; done < .env.ci
+
+      - name: Start the Storage stand-in
+        run: |
+          nohup node scripts/test/storage-stub.mjs --port 54330 > storage-stub.log 2>&1 &
+          for i in $(seq 1 20); do curl -s -o /dev/null http://127.0.0.1:54330/storage/v1/bucket && break; sleep 0.5; done
+
+      - name: Migrate and create the bucket and admin
+        run: npm run db:setup -- --env-file .env.ci --no-demo
+
+      - name: Build with the real backend
+        run: npm run build
+
+      - name: Start the app
+        run: |
+          nohup npx next start -p 3200 > next.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3200/api/health > /dev/null && break; sleep 1; done
+          curl -sf http://localhost:3200/api/health
+
+      - name: API smoke test (with the claim breaker)
+        run: npm run api:smoke -- --base http://localhost:3200 --env-file .env.ci --breaker
+
+      - name: Server logs
+        if: failure()
+        run: |
+          echo "── next.log ──"; tail -200 next.log || true
+          echo "── storage-stub.log ──"; tail -50 storage-stub.log || true

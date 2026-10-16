@@ -13,6 +13,7 @@ const ACTION: Record<AuditAction, string> = {
   "content.saved": "Content saved",
   "content.removed": "Content removed by the sender",
   "content.removed_by_admin": "Content removed by admin",
+  "content.restored": "Earlier version restored by admin",
   "batch.generated": "Batch generated",
   "batch.encoded": "Batch marked as encoded",
   "batch.voided": "Batch voided",
@@ -23,6 +24,15 @@ const ACTION: Record<AuditAction, string> = {
   "admin.signed_in": "Admin signed in",
   "admin.signed_out": "Admin signed out",
   "admin.sign_in_failed": "Admin sign-in failed",
+  "admin.two_factor_enrolled": "Admin set up two-factor sign-in",
+  "admin.recovery_codes_reset": "Admin replaced their recovery codes",
+  "admin.recovery_code_used": "Admin signed in with a recovery code",
+  "admin.created": "Admin account created",
+  "admin.password_reset": "Admin password reset",
+  "admin.two_factor_reset": "Admin two-factor sign-in reset",
+  "admin.disabled": "Admin account disabled",
+  "admin.enabled": "Admin account enabled again",
+  "system.breaker_tripped": "Mass code-guessing detected: bot check on for 6 hours",
 };
 
 const ACTOR: Record<AuditEntry["actor"], string> = {
@@ -38,7 +48,7 @@ const STAMP_NAME: Record<StampKind, string> = { photos: "Photos", letter: "Lette
 function prettyDetail(entry: AuditEntry): string | undefined {
   const d = entry.detail;
   if (!d) return undefined;
-  if (entry.action === "content.saved" || entry.action === "content.removed" || entry.action === "content.removed_by_admin") {
+  if (entry.action === "content.saved" || entry.action === "content.removed" || entry.action === "content.removed_by_admin" || entry.action === "content.restored") {
     const [kind, ...rest] = d.split(" ");
     if (kind in STAMP_NAME) return [STAMP_NAME[kind as StampKind], ...rest].join(" ");
     if (kind === "photo") return "One photo";
@@ -61,7 +71,9 @@ export function auditTone(action: AuditAction): "neutral" | "good" | "attention"
     action === "unit.tokens_revoked" ||
     action === "batch.voided" ||
     action === "media.rejected" ||
-    action === "admin.sign_in_failed"
+    action === "admin.sign_in_failed" ||
+    action === "admin.recovery_code_used" ||
+    action === "system.breaker_tripped"
   )
     return "attention";
   return "neutral";

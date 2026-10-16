@@ -1,5 +1,5 @@
 /**
- * GET  /api/admin/batches                 → 200 Batch[] (newest first, void batches hidden)
+ * GET  /api/admin/batches                 → 200 Batch[] (newest first, with status and claim counts)
  * POST /api/admin/batches { count, label } → 201 { batch, rows: ProvisionedRow[] }
  *
  * The provisioning ceremony (ARCHITECTURE.md §3.6): one transaction creates the batch and its
@@ -8,10 +8,11 @@
  */
 import { recipientUrl, site } from "@/config/site";
 import { generateCode, generateSlug } from "@/lib/parsing/codes";
-import type { Batch, ProvisionedRow } from "@/lib/services/types";
+import type { ProvisionedRow } from "@/lib/services/types";
 import { requireAdmin } from "@/lib/server/admin-auth";
+import { batchById, listBatches } from "@/lib/server/batches";
 import { codeHash } from "@/lib/server/crypto";
-import { isoReq, sql, tx } from "@/lib/server/db";
+import { sql, tx } from "@/lib/server/db";
 import { audit, unitNo } from "@/lib/server/envelopes";
 import { body, json, route } from "@/lib/server/http";
 import { z } from "zod";
@@ -20,9 +21,7 @@ export const maxDuration = 60;
 
 export const GET = route(async (req) => {
   await requireAdmin(req);
-  const rows = await sql()<{ id: string; label: string; created_at: Date; unit_count: number }[]>`
-    select id, label, created_at, unit_count from batches where status <> 'void' order by created_at desc`;
-  return json(rows.map((b): Batch => ({ id: b.id, label: b.label, createdAt: isoReq(b.created_at), count: b.unit_count })));
+  return json(await listBatches(sql()));
 });
 
 const Body = z.object({ count: z.number().int().min(1).max(5000), label: z.string().trim().max(80) });
@@ -33,10 +32,10 @@ export const POST = route(async (req) => {
   const name = label || `Batch · ${count}`;
 
   const result = await tx(async (t) => {
-    const [b] = await t<{ id: string; created_at: Date }[]>`
+    const [b] = await t<{ id: string }[]>`
       insert into batches (label, unit_count, code_length, chip_domain, created_by)
       values (${name}, ${count}, ${site.codes.length}, ${site.chipDomain}, ${adminId})
-      returning id, created_at`;
+      returning id`;
 
     const rows: ProvisionedRow[] = [];
     let missing = count;
@@ -57,8 +56,8 @@ export const POST = route(async (req) => {
     }
     if (missing > 0) throw new Error("batch generation kept colliding");
     rows.sort((a, b2) => a.unitNo.localeCompare(b2.unitNo));
-    await audit(t, { unitId: null, action: "batch.generated", actor: "admin", adminId, detail: `${name}: ${count} units, ${site.codes.length}-char codes` });
-    return { batch: { id: b.id, label: name, createdAt: isoReq(b.created_at), count } satisfies Batch, rows };
+    await audit(t, { unitId: null, action: "batch.generated", actor: "admin", adminId, detail: `${name}: ${count} units, ${site.codes.length}-char codes, ${site.chipDomain}` });
+    return { batch: (await batchById(t, b.id))!, rows };
   });
   return json(result, 201);
 });

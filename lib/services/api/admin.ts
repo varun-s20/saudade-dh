@@ -11,6 +11,7 @@
  *     printed for that unit. Path B units never ship with a card, so nothing is lost.
  */
 import type {
+  AdminSecurity,
   AdminService,
   AdminSession,
   AdminStats,
@@ -18,7 +19,9 @@ import type {
   DeliveryPath,
   EmailMessage,
   ProvisionedRow,
+  Readiness,
   StampKind,
+  TwoFactorSetup,
   UnitDetail,
   UnitListPage,
 } from "@/lib/services/types";
@@ -26,8 +29,8 @@ import { fail, idempotencyKey, path, request } from "./http";
 
 export const apiAdminService: AdminService = {
   /**
-   * `otp` is the [PROPOSED] TOTP second factor. The server answers 401 { detail: "otp_required" }
-   * when the password is right but the code is missing (see proposed types.ts change).
+   * `otp` is the TOTP second factor (or a recovery code). The server answers 401
+   * { detail: "otp_required" } when the password is right but the code is missing.
    */
   async signIn(email: string, password: string, otp?: string) {
     if (!email.trim() || !password) return fail("unauthorized", { detail: "missing credentials" });
@@ -35,7 +38,7 @@ export const apiAdminService: AdminService = {
       method: "POST",
       path: "/api/admin/session",
       auth: "admin",
-      body: { email: email.trim().toLowerCase(), password, ...(otp ? { otp: otp.replace(/\s+/g, "") } : {}) },
+      body: { email: email.trim().toLowerCase(), password, ...(otp?.trim() ? { otp: otp.trim() } : {}) },
     });
   },
 
@@ -46,6 +49,36 @@ export const apiAdminService: AdminService = {
   async getSession() {
     const res = await request<AdminSession>({ path: "/api/admin/session", auth: "admin" });
     return res.ok ? res.data : null;
+  },
+
+  getSecurity() {
+    return request<AdminSecurity>({ path: "/api/admin/2fa", auth: "admin" });
+  },
+
+  startTwoFactor() {
+    return request<TwoFactorSetup>({ method: "POST", path: "/api/admin/2fa/setup", auth: "admin" });
+  },
+
+  confirmTwoFactor(pending, code) {
+    return request<{ recoveryCodes: string[] }>({
+      method: "POST",
+      path: "/api/admin/2fa/confirm",
+      auth: "admin",
+      body: { pending, code: code.replace(/\s+/g, "") },
+    });
+  },
+
+  regenerateRecoveryCodes(code) {
+    return request<{ recoveryCodes: string[] }>({
+      method: "POST",
+      path: "/api/admin/2fa/recovery-codes",
+      auth: "admin",
+      body: { code: code.replace(/\s+/g, "") },
+    });
+  },
+
+  getReadiness() {
+    return request<Readiness>({ path: "/api/admin/readiness", auth: "admin" });
   },
 
   getStats() {
@@ -96,6 +129,16 @@ export const apiAdminService: AdminService = {
     });
   },
 
+  restoreContent(unitId, kind: StampKind, version: number) {
+    return request<void>({
+      method: "POST",
+      path: path`/api/admin/units/${unitId}/contents/${kind}/restore`,
+      auth: "admin",
+      body: { version },
+      expect: "empty",
+    });
+  },
+
   listBatches() {
     return request<Batch[]>({ path: "/api/admin/batches", auth: "admin" });
   },
@@ -122,5 +165,13 @@ export const apiAdminService: AdminService = {
       expect: "text",
       headers: { accept: "text/csv" },
     });
+  },
+
+  markBatchEncoded(batchId) {
+    return request<Batch>({ method: "POST", path: path`/api/admin/batches/${batchId}/encoded`, auth: "admin" });
+  },
+
+  voidBatch(batchId) {
+    return request<Batch>({ method: "POST", path: path`/api/admin/batches/${batchId}/void`, auth: "admin" });
   },
 };

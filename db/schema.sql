@@ -249,6 +249,8 @@ create table media (
   -- removed_at + 90 days. The purge job deletes R2 objects after this, never before.
   purge_after       timestamptz,
   purged_at         timestamptz,
+  -- The raw upload was deleted 7 days after normalisation; the variants remain (migration 0002).
+  original_deleted_at timestamptz,
   constraint media_ready_ck check (state <> 'ready' or ready_at is not null),
   constraint media_removed_ck check ((state = 'removed') = (removed_at is not null)),
   constraint media_purge_ck check (removed_at is null or purge_after is not null)
@@ -410,6 +412,17 @@ create table idempotency_keys (
   primary key (scope, key)
 );
 create index idempotency_created_idx on idempotency_keys (created_at);
+
+-- One row per scheduled task (cron.daily, cron.jobs, backup.nightly): last run and outcome, for the
+-- admin's launch checklist (migration 0002). Counts only, never personal data.
+create table ops_runs (
+  task              text primary key check (task ~ '^[a-z_.]+$' and char_length(task) <= 40),
+  last_started_at   timestamptz not null,
+  last_finished_at  timestamptz,
+  last_ok           boolean,
+  last_summary      jsonb not null default '{}'::jsonb check (octet_length(last_summary::text) <= 4096),
+  last_error        text check (char_length(last_error) <= 1000)
+);
 
 -- ─── Admin read model ───────────────────────────────────────────────────────
 

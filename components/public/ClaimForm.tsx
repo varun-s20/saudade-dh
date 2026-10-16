@@ -11,6 +11,7 @@ import { formatCode } from "@/lib/parsing/codes";
 import { services } from "@/lib/services";
 import type { ServiceErrorCode } from "@/lib/services/types";
 import { clock } from "@/lib/utils/format";
+import { Turnstile } from "./Turnstile";
 
 /** Plain, clear error copy (no postal metaphors except the agreed "found its envelope" line). */
 const MESSAGES: Partial<Record<ServiceErrorCode, string>> = {
@@ -19,6 +20,7 @@ const MESSAGES: Partial<Record<ServiceErrorCode, string>> = {
   rate_limited: "Too many tries in a row. Take a breath: you can try again shortly, and your code is still here.",
   network: "We couldn't reach Saudade. Check your connection and try again.",
   invalid_input: "That doesn't look like a code. Check the card in your box, or the email we sent you.",
+  challenge_required: "One quick check that you're a person, then we'll open your envelope.",
 };
 
 /** The stamp-press success beat before moving on (MASTER_BUILD_PROMPT: ≤ 700 ms). */
@@ -28,6 +30,9 @@ const SUCCESS_MS_REDUCED = 450;
 /**
  * S2: enter the activation code, claim the envelope, then on to /claim/success.
  * `onEcho` reports what's typed and the form's state (the claim page mirrors it onto a ticket).
+ *
+ * If the server answers `challenge_required` (mass code-guessing has switched the bot check on),
+ * a Turnstile check appears; once it passes, the claim is sent again with its one-time token.
  */
 export function ClaimForm({ onEcho }: { onEcho?: (body: string, state: CodeInputState) => void }) {
   const router = useRouter();
@@ -38,6 +43,8 @@ export function ClaimForm({ onEcho }: { onEcho?: (body: string, state: CodeInput
   const [until, setUntil] = useState<number | null>(null);
   const [now, setNow] = useState(0);
   const [announce, setAnnounce] = useState("");
+  /** Bot check on screen; the key changes to render a fresh widget (tokens are single-use). */
+  const [challenge, setChallenge] = useState<number | null>(null);
   const succeeded = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -66,6 +73,7 @@ export function ClaimForm({ onEcho }: { onEcho?: (body: string, state: CodeInput
         setBody("");
         setState("idle");
         setError(null);
+        setChallenge(null);
       }
     };
   }, []);
@@ -78,7 +86,7 @@ export function ClaimForm({ onEcho }: { onEcho?: (body: string, state: CodeInput
   const remaining = limited ? Math.max(0, Math.ceil((until - now) / 1000)) : 0;
   const busy = state === "checking" || state === "success";
 
-  const submit = async (e?: FormEvent) => {
+  const submit = async (e?: FormEvent, challengeToken?: string) => {
     e?.preventDefault();
     if (busy || limited) return;
     if (body.length < site.codes.length) {
@@ -86,17 +94,28 @@ export function ClaimForm({ onEcho }: { onEcho?: (body: string, state: CodeInput
       setState("error");
       return;
     }
+    // Waiting on the bot check: its success sends the claim (see onToken below).
+    if (challenge !== null && !challengeToken) return;
     setError(null);
     setAnnounce("");
     setState("checking");
-    const res = await services.units.claim(formatCode(body));
+    const res = await services.units.claim(formatCode(body), challengeToken ? { challengeToken } : undefined);
     if (res.ok) {
       setState("success");
+      setChallenge(null);
       succeeded.current = true;
       timer.current = setTimeout(() => router.push(`/claim/success?t=${encodeURIComponent(res.data.token)}`), reduced ? SUCCESS_MS_REDUCED : SUCCESS_MS);
       return;
     }
     const code = res.error.code;
+    // Each check is good for one try: a fresh widget for the next one.
+    if (challengeToken || code === "challenge_required") setChallenge(code === "challenge_required" && site.turnstileSiteKey ? Date.now() : null);
+    if (code === "challenge_required" && site.turnstileSiteKey) {
+      setError(null);
+      setState("idle");
+      setAnnounce(MESSAGES.challenge_required ?? "");
+      return;
+    }
     setError({ code, text: MESSAGES[code] ?? "Something went wrong. Try again in a moment." });
     setState("error");
     if (code === "rate_limited") {
@@ -126,6 +145,25 @@ export function ClaimForm({ onEcho }: { onEcho?: (body: string, state: CodeInput
         checkingText="Checking your code…"
         successText="That's the one. Your envelope is yours."
       />
+
+      {challenge !== null && site.turnstileSiteKey && (
+        <div className="mt-5" role="group" aria-labelledby="claim-check">
+          <p id="claim-check" className="text-ink-soft">
+            {MESSAGES.challenge_required}
+          </p>
+          <div className="mt-3">
+            <Turnstile
+              key={challenge}
+              siteKey={site.turnstileSiteKey}
+              onToken={(token) => void submit(undefined, token)}
+              onError={() => {
+                setError({ code: "network", text: "The check didn't load. Refresh the page and try again." });
+                setState("error");
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {error?.code === "already_claimed" && (
         <p className="mt-3 text-ink-soft">

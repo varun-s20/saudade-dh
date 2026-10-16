@@ -2,7 +2,9 @@
 
 /**
  * <CodeInput>: segmented activation-code entry: a printed "SAUD-" and one box per character
- * (site.codes.length). Each filled box looks hand-stamped (ink on a card, slightly askew).
+ * (site.codes.length), in groups of four with a printed dash between them, as on the card
+ * (SAUD-3K7M or SAUD-3K7M-Q2XF). An 8-character code wraps its second group onto its own line
+ * on narrow phones. Each filled box looks hand-stamped (ink on a card, slightly askew).
  *
  * Behaviour
  * - Auto-uppercase. Characters outside the code alphabet are ignored.
@@ -49,6 +51,10 @@ export interface CodeInputProps {
 export const AMBIGUOUS_HINT = "Codes never use 0, O, 1, I or L, so it might be a similar letter.";
 const PREFIX_HINT = `The ${site.codes.prefix}- part is already there, so just type the ${site.codes.length} characters after it.`;
 const TILTS = [-1.6, 1.1, -0.7, 1.6, -1.2, 0.8, -0.4, 1.3];
+/** Boxes per printed group (SAUD-XXXX-XXXX). */
+const GROUP = 4;
+/** What the first boxes hold if someone types the prefix itself (never a real code: see generateCode). */
+const PREFIX_TYPED = site.codes.prefix.slice(0, site.codes.length);
 
 export function CodeInput({
   value,
@@ -106,7 +112,7 @@ export function CodeInput({
   };
 
   const commit = (next: string, focusAt: number) => {
-    if (next.length === len && next === site.codes.prefix.slice(0, len)) {
+    if (next === PREFIX_TYPED) {
       refuse(0, PREFIX_HINT);
       change("");
       focusSoon(0);
@@ -215,46 +221,66 @@ export function CodeInput({
 
   const tone = state === "checking" ? "neutral" : error ? "error" : hint ? "hint" : state === "success" ? "success" : null;
 
+  const box = (i: number) => (
+    <input
+      key={i}
+      ref={(el) => {
+        refs.current[i] = el;
+      }}
+      id={i === 0 ? id : `${id}-${i + 1}`}
+      className="sd-code__box"
+      value={body[i] ?? ""}
+      data-filled={body[i] ? "true" : undefined}
+      data-nudge={nudge?.i === i ? (nudge.n % 2 ? "a" : "b") : undefined}
+      style={{ "--tilt": `${TILTS[i % TILTS.length]}deg` } as CSSProperties}
+      type="text"
+      inputMode="text"
+      autoCapitalize="characters"
+      autoComplete={i === 0 ? "one-time-code" : "off"}
+      autoCorrect="off"
+      spellCheck={false}
+      enterKeyHint={i === len - 1 ? "go" : "next"}
+      aria-label={`Character ${i + 1} of ${len}`}
+      aria-invalid={error ? true : undefined}
+      disabled={disabled}
+      readOnly={readOnly}
+      autoFocus={autoFocus && i === 0}
+      onKeyDown={(e) => onKeyDown(e, i)}
+      onChange={(e) => onBoxChange(e, i)}
+      onPaste={(e) => onPaste(e, i)}
+      onFocus={() => onFocus(i)}
+    />
+  );
+  const groups = Array.from({ length: Math.ceil(len / GROUP) }, (_, g) =>
+    Array.from({ length: Math.min(GROUP, len - g * GROUP) }, (_, j) => g * GROUP + j),
+  );
+
   return (
     <div className={cn("sd-code", className)} data-state={state} data-invalid={error ? "true" : undefined}>
       <span id={labelId} className={hideLabel ? "sr-only" : "postal-label text-ink-soft"}>
         {label}
         <span className="sr-only">, {site.codes.prefix} dash is already filled in</span>
       </span>
-      <div className="sd-code__row" role="group" aria-labelledby={labelId} aria-describedby={msgId}>
+      <div className="sd-code__row" role="group" aria-labelledby={labelId} aria-describedby={msgId} data-groups={groups.length}>
         <span className="sd-code__prefix" aria-hidden>
           {site.codes.prefix}-
         </span>
-        {Array.from({ length: len }, (_, i) => (
-          <input
-            key={i}
-            ref={(el) => {
-              refs.current[i] = el;
-            }}
-            id={i === 0 ? id : `${id}-${i + 1}`}
-            className="sd-code__box"
-            value={body[i] ?? ""}
-            data-filled={body[i] ? "true" : undefined}
-            data-nudge={nudge?.i === i ? (nudge.n % 2 ? "a" : "b") : undefined}
-            style={{ "--tilt": `${TILTS[i % TILTS.length]}deg` } as CSSProperties}
-            type="text"
-            inputMode="text"
-            autoCapitalize="characters"
-            autoComplete={i === 0 ? "one-time-code" : "off"}
-            autoCorrect="off"
-            spellCheck={false}
-            enterKeyHint={i === len - 1 ? "go" : "next"}
-            aria-label={`Character ${i + 1} of ${len}`}
-            aria-invalid={error ? true : undefined}
-            disabled={disabled}
-            readOnly={readOnly}
-            autoFocus={autoFocus && i === 0}
-            onKeyDown={(e) => onKeyDown(e, i)}
-            onChange={(e) => onBoxChange(e, i)}
-            onPaste={(e) => onPaste(e, i)}
-            onFocus={() => onFocus(i)}
-          />
-        ))}
+        {groups.length === 1 ? (
+          groups[0].map(box)
+        ) : (
+          <span className="sd-code__groups">
+            {groups.map((g, gi) => (
+              <span key={gi} className="sd-code__group">
+                {gi > 0 && (
+                  <span className="sd-code__dash" aria-hidden>
+                    -
+                  </span>
+                )}
+                {g.map(box)}
+              </span>
+            ))}
+          </span>
+        )}
         {state === "success" && (
           <span className="sd-code__stamp" aria-hidden>
             <Postmark variant="circle" place="RECEIVED" bottom="SAUDADE" ink="red" size={96} opacity={0.9} seed={42} />

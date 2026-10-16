@@ -1,15 +1,19 @@
 import { recipientUrl, site } from "@/config/site";
+import { summarise } from "@/lib/content-summary";
 import { codeBody, generateCode, generateId, generateSlug } from "@/lib/parsing/codes";
+import { configChecks } from "@/lib/readiness-config";
 import type {
   AdminService,
+  AdminSession,
   AdminStats,
   Batch,
   ContentMap,
+  ContentVersion,
   ProvisionedRow,
   Unit,
   UnitStatus,
 } from "@/lib/services/types";
-import { UNIT_STATUSES } from "@/lib/services/types";
+import { STAMP_KINDS, UNIT_STATUSES } from "@/lib/services/types";
 import { giftCodeEmail } from "@/lib/email/templates";
 import { emailService } from "./email";
 import { appendAudit, db, fail, latency, nowIso, ok, patchUnit, ready, statusAfterEdit, update } from "./runtime";
@@ -17,8 +21,43 @@ import { appendAudit, db, fail, latency, nowIso, ok, patchUnit, ready, statusAft
 /** Prototype-only credentials, shown on the login screen as a demo hint. */
 export const DEMO_ADMIN = { email: "zeya@saudade.example", password: "postmark" } as const;
 
+/** Two-factor sign-in, version history and the full launch checklist live on the real backend. */
+const BACKEND_ONLY = { detail: "Available with the real backend (NEXT_PUBLIC_DATA_SOURCE=api)" };
+
 function signedIn(): boolean {
   return Boolean(db().admin);
+}
+
+/** Sessions saved by an older prototype build have no twoFactor field. */
+const asSession = (s: AdminSession | null): AdminSession | null => (s ? { ...s, twoFactor: s.twoFactor ?? "off" } : null);
+
+/** Batches saved by an older prototype build lack the lifecycle fields. */
+function asBatch(b: Batch): Batch {
+  const units = Object.values(db().units).filter((u) => u.batchId === b.id);
+  return {
+    ...b,
+    status: b.status ?? "generated",
+    codeLength: b.codeLength ?? site.codes.length,
+    chipDomain: b.chipDomain ?? site.chipDomain,
+    encodedAt: b.encodedAt ?? null,
+    claimedCount: units.filter((u) => u.codeRedeemedAt || u.claimedAt).length,
+  };
+}
+
+function patchBatch(id: string, patch: Partial<Batch>): Batch | null {
+  const found = db().batches.find((b) => b.id === id);
+  if (!found) return null;
+  update((s) => ({ batches: s.batches.map((b) => (b.id === id ? { ...b, ...patch } : b)) }));
+  return asBatch({ ...found, ...patch });
+}
+
+/** The prototype keeps only the current version of each stamp. */
+function currentVersions(map: ContentMap): ContentVersion[] {
+  return STAMP_KINDS.flatMap((kind) => {
+    const rec = map[kind];
+    if (!rec) return [];
+    return [{ kind, version: rec.version, savedBy: "sender", savedAt: rec.updatedAt, supersededAt: null, removedAt: null, current: true, summary: summarise(rec.content), restorable: true } satisfies ContentVersion];
+  }).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
 }
 
 function toCsv(rows: ProvisionedRow[]): string {
@@ -31,7 +70,7 @@ export const adminService: AdminService = {
     await ready();
     await latency(1.2);
     if (email.trim().toLowerCase() !== DEMO_ADMIN.email || password !== DEMO_ADMIN.password) return fail("unauthorized");
-    const session = { email: DEMO_ADMIN.email, signedInAt: nowIso() };
+    const session: AdminSession = { email: DEMO_ADMIN.email, signedInAt: nowIso(), twoFactor: "off" };
     update(() => ({ admin: session }));
     appendAudit({ unitId: null, action: "admin.signed_in", actor: "admin", detail: session.email });
     return ok(session);
@@ -44,7 +83,46 @@ export const adminService: AdminService = {
 
   async getSession() {
     await ready();
-    return db().admin;
+    return asSession(db().admin);
+  },
+
+  async getSecurity() {
+    await ready();
+    if (!signedIn()) return fail("unauthorized");
+    return ok({ twoFactor: "off", enrolledAt: null, recoveryCodesLeft: 0 });
+  },
+
+  async startTwoFactor() {
+    await ready();
+    return fail("invalid_input", BACKEND_ONLY);
+  },
+
+  async confirmTwoFactor() {
+    await ready();
+    return fail("invalid_input", BACKEND_ONLY);
+  },
+
+  async regenerateRecoveryCodes() {
+    await ready();
+    return fail("invalid_input", BACKEND_ONLY);
+  },
+
+  async getReadiness() {
+    await ready();
+    await latency(0.4);
+    if (!signedIn()) return fail("unauthorized");
+    return ok({
+      checkedAt: nowIso(),
+      checks: [
+        {
+          id: "prototype",
+          label: "Prototype data",
+          status: "warn",
+          detail: "This is the clickable prototype: everything lives in this browser. Email, backups, two-factor sign-in and the nightly jobs are checked on the real backend.",
+        },
+        ...configChecks(),
+      ],
+    });
   },
 
   async getStats() {
@@ -98,11 +176,13 @@ export const adminService: AdminService = {
     if (!signedIn()) return fail("unauthorized");
     const unit = db().units[unitId];
     if (!unit) return fail("not_found");
+    const contents = db().contents[unitId] ?? {};
     return ok({
       unit,
-      contents: db().contents[unitId] ?? {},
+      contents,
       audit: db().audit.filter((a) => a.unitId === unitId),
       reveals: db().reveals.filter((r) => r.unitId === unitId),
+      history: currentVersions(contents),
     });
   },
 
@@ -183,11 +263,44 @@ export const adminService: AdminService = {
     return ok(undefined);
   },
 
+  async restoreContent() {
+    await ready();
+    await latency(0.4);
+    if (!signedIn()) return fail("unauthorized");
+    return fail("not_found", BACKEND_ONLY);
+  },
+
   async listBatches() {
     await ready();
     await latency(0.4);
     if (!signedIn()) return fail("unauthorized");
-    return ok([...db().batches].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    return ok([...db().batches].map(asBatch).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+  },
+
+  async markBatchEncoded(batchId) {
+    await ready();
+    await latency(0.5);
+    if (!signedIn()) return fail("unauthorized");
+    const b = db().batches.find((x) => x.id === batchId);
+    if (!b) return fail("not_found");
+    if (b.status === "void") return fail("invalid_input", { detail: "this batch was voided" });
+    if (b.status === "encoded") return ok(asBatch(b));
+    appendAudit({ unitId: null, action: "batch.encoded", actor: "admin", detail: b.label });
+    return ok(patchBatch(batchId, { status: "encoded", encodedAt: nowIso() })!);
+  },
+
+  async voidBatch(batchId) {
+    await ready();
+    await latency(0.5);
+    if (!signedIn()) return fail("unauthorized");
+    const b = db().batches.find((x) => x.id === batchId);
+    if (!b) return fail("not_found");
+    if (b.status === "encoded") return fail("invalid_input", { detail: "the chips are already encoded: an encoded batch can never be voided" });
+    if (b.status === "void") return ok(asBatch(b));
+    const claimed = asBatch(b).claimedCount;
+    if (claimed) return fail("invalid_input", { detail: `${claimed} of its codes are already claimed` });
+    appendAudit({ unitId: null, action: "batch.voided", actor: "admin", detail: b.label });
+    return ok(patchBatch(batchId, { status: "void" })!);
   },
 
   async generateBatch(count, label) {
@@ -197,7 +310,17 @@ export const adminService: AdminService = {
     const n = Math.max(1, Math.min(5000, Math.floor(count)));
     const codes = new Set(Object.values(db().units).map((u) => u.code));
     const slugs = new Set(Object.values(db().units).map((u) => u.slug));
-    const batch: Batch = { id: generateId("batch"), label: label || `Batch · ${n}`, createdAt: nowIso(), count: n };
+    const batch: Batch = {
+      id: generateId("batch"),
+      label: label || `Batch · ${n}`,
+      createdAt: nowIso(),
+      count: n,
+      status: "generated",
+      codeLength: site.codes.length,
+      chipDomain: site.chipDomain,
+      encodedAt: null,
+      claimedCount: 0,
+    };
     const created: Record<string, Unit> = {};
     const rows: ProvisionedRow[] = [];
     let nextNo = Object.keys(db().units).length;

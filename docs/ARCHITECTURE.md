@@ -21,6 +21,14 @@ the PM to renumber).
 > Neon + Cloudflare R2. The REST contract (§6), state machine (§4), data model (§5), identifiers (§3), first-open
 > rules (§8) and security model (§9) are unchanged; storage is a private Supabase bucket with signed URLs.
 > Setup and status: `docs/BACKEND.md`.
+>
+> **Update 2026-10-16 (DECISIONS D-083 to D-088):** this blueprint is now built: media pipeline (§7), jobs and
+> cron (§6.6), song health (§11), TOTP 2FA (§9.4), Turnstile breaker (§9.2), headers and CSP (§9.3), batch
+> encoded/void (§6.5), off-provider backups and restore drill (§10, `docs/BACKUPS.md`), handover
+> (`docs/HANDOVER.md`). Where the build differs from the text below: storage keys and backups use Supabase
+> Storage and its S3 endpoint, not R2; the CSP is two static policies (public, admin), not a nonce policy, and the
+> public one allows `'unsafe-eval'` for Spotify's iFrame API (D-085); cron is nightly on every plan, with
+> `/api/cron/jobs` optional on Vercel Pro; there is no `proxy.ts` and no upper-case `/T/` rewrite (D-086).
 
 | # | Decision | Why |
 | --- | --- | --- |

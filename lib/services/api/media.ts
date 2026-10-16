@@ -77,12 +77,17 @@ export const apiMediaService: MediaService = {
     return done;
   },
 
-  async getUrl(mediaId) {
-    const cached = urlCache.get(mediaId);
+  /**
+   * "thumb" asks for a photo's 480 px thumbnail (sent as `{id}:thumb` in `mediaUrls`); the default
+   * is the full display file (photos) or the AAC audio (voice).
+   */
+  async getUrl(mediaId, variant) {
+    const key = variant === "thumb" ? `${mediaId}:thumb` : mediaId;
+    const cached = urlCache.get(key);
     if (cached && Date.parse(cached.expiresAt) - EXPIRY_MARGIN_MS > Date.now()) return cached.url;
-    urlCache.delete(mediaId);
+    urlCache.delete(key);
     // Stable path; the server answers 302 → fresh signed URL (Cache-Control: private, max-age=600).
-    return `${API_BASE}${path`/api/media/${mediaId}`}`;
+    return `${API_BASE}${path`/api/media/${mediaId}`}${variant === "thumb" ? "?v=thumb" : ""}`;
   },
 
   async remove(token, mediaId) {

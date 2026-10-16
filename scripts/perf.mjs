@@ -6,6 +6,9 @@
  *
  *   npx next build && npx next start -p 3200      (in another terminal)
  *   node scripts/perf.mjs --base http://localhost:3200 [--state first|repeat|empty]
+ *   node scripts/perf.mjs --base <url> --slug <slug> [--state …]
+ *       the real backend (NEXT_PUBLIC_DATA_SOURCE=api): measure an existing envelope already in
+ *       that state (e.g. a sealed, never-opened one for "first"); no Demo Panel involved.
  */
 import { chromium } from "playwright-core";
 
@@ -13,28 +16,31 @@ const args = process.argv.slice(2);
 const arg = (n, d) => (args.includes(`--${n}`) ? args[args.indexOf(`--${n}`) + 1] : d);
 const BASE = arg("base", "http://localhost:3200");
 const STATE = arg("state", "first");
-const SLUG = "h4kqzm2xv7pt";
+const REAL_SLUG = arg("slug", null);
+const SLUG = REAL_SLUG ?? "h4kqzm2xv7pt";
 const SCENARIO = { first: "First tap", repeat: "Repeat visit", empty: "Empty envelope" }[STATE];
 
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 const page = await ctx.newPage();
 
-// 1. Put the hero unit into the requested state through the presenter's Demo Panel.
-await page.goto(`${BASE}/?demo=1`, { waitUntil: "networkidle" });
-await page.getByRole("button", { name: /Open demo panel/ }).click();
-await page.getByRole("button", { name: new RegExp(`^${SCENARIO}`) }).first().click();
-await page.waitForURL(new RegExp(`/t/${SLUG}`), { timeout: 20000 });
-await page.waitForTimeout(1500);
-// Hide the presenter panel so it isn't part of the measurement.
-const FAST = args.includes("--fast");
-await page.evaluate((FAST) => {
-  const s = JSON.parse(localStorage.getItem("saudade-demo-v1") ?? '{"state":{}}');
-  s.state.enabled = false;
-  s.state.open = false;
-  s.state.fast = FAST; // skip the mock layer's simulated 300–900 ms server latency
-  localStorage.setItem("saudade-demo-v1", JSON.stringify(s));
-}, FAST);
+const FAST = args.includes("--fast") || Boolean(REAL_SLUG);
+if (!REAL_SLUG) {
+  // 1. Put the hero unit into the requested state through the presenter's Demo Panel.
+  await page.goto(`${BASE}/?demo=1`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: /Open demo panel/ }).click();
+  await page.getByRole("button", { name: new RegExp(`^${SCENARIO}`) }).first().click();
+  await page.waitForURL(new RegExp(`/t/${SLUG}`), { timeout: 20000 });
+  await page.waitForTimeout(1500);
+  // Hide the presenter panel so it isn't part of the measurement.
+  await page.evaluate((FAST) => {
+    const s = JSON.parse(localStorage.getItem("saudade-demo-v1") ?? '{"state":{}}');
+    s.state.enabled = false;
+    s.state.open = false;
+    s.state.fast = FAST; // skip the mock layer's simulated 300–900 ms server latency
+    localStorage.setItem("saudade-demo-v1", JSON.stringify(s));
+  }, FAST);
+}
 
 // 2. Cold cache + throttling, then a fresh load of the recipient URL (what an NFC tap does).
 const cdp = await ctx.newCDPSession(page);
@@ -83,7 +89,9 @@ for (const t of transfers) {
 }
 const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
 const worldChunks = jsFiles.filter(([f]) => /world/i.test(f));
-console.log(`State: ${STATE}${FAST ? " (no simulated server latency)" : ""}  (load took ${((Date.now() - t0) / 1000).toFixed(1)} s wall-clock under throttling)`);
+console.log(
+  `State: ${STATE}${REAL_SLUG ? ` (real backend, /t/${SLUG})` : FAST ? " (no simulated server latency)" : ""}  (load took ${((Date.now() - t0) / 1000).toFixed(1)} s wall-clock under throttling)`,
+);
 console.log(`Ready to interact after ${readyMs} ms (wall-clock, throttled)`);
 console.log(`LCP ${Math.round(lcp)} ms (budget < 2500)   CLS ${cls.toFixed(3)} (budget < 0.05)`);
 console.log(`JS before ready: ${kb(jsReady)} (budget ≲ 150 KB)   JS after ready (idle prefetch of stamp worlds etc.): ${kb(js - jsReady)}`);

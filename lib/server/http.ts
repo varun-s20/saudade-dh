@@ -25,6 +25,7 @@ const STATUS: Record<ServiceErrorCode, number> = {
   unsupported_link: 422,
   nothing_to_seal: 409,
   invalid_input: 400,
+  challenge_required: 403,
   network: 503,
 };
 

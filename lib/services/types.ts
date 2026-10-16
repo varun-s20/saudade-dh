@@ -49,6 +49,7 @@ export type ServiceErrorCode =
   | "unsupported_link"
   | "nothing_to_seal"
   | "invalid_input" // request failed validation (bad email, oversized field…)
+  | "challenge_required" // claim: guessing at scale tripped the breaker; pass a bot check, then retry
   | "network";
 
 export interface ServiceError {
@@ -232,9 +233,35 @@ export interface RevealEvent {
 
 // ─── Admin ─────────────────────────────────────────────────────────────────
 
+/**
+ * Two-factor state of an admin session (AQ5):
+ *   off      — this deployment doesn't require 2FA (no TOTP_ENC_KEY); the password is enough.
+ *   enrol    — signed in with the password; the panel stays locked until an authenticator is set up.
+ *   verified — signed in with the password and a one-time code (or a recovery code).
+ */
+export type AdminTwoFactor = "off" | "enrol" | "verified";
+
 export interface AdminSession {
   email: string;
   signedInAt: ISODate;
+  twoFactor: AdminTwoFactor;
+}
+
+/** Returned once when enrolment starts; `pending` goes back with the first code to confirm it. */
+export interface TwoFactorSetup {
+  /** Opaque, encrypted and short-lived: the secret is only stored once a code proves it works. */
+  pending: string;
+  /** Base32 secret, for typing in by hand. */
+  secret: string;
+  otpauthUrl: string;
+  /** PNG data URL of the otpauth QR code. */
+  qrDataUrl: string;
+}
+
+export interface AdminSecurity {
+  twoFactor: "off" | "enrolled" | "not_enrolled";
+  enrolledAt: ISODate | null;
+  recoveryCodesLeft: number;
 }
 
 export type AuditAction =
@@ -249,6 +276,7 @@ export type AuditAction =
   | "content.saved"
   | "content.removed"
   | "content.removed_by_admin"
+  | "content.restored"
   | "batch.generated"
   | "batch.encoded"
   | "batch.voided"
@@ -258,7 +286,17 @@ export type AuditAction =
   | "media.rejected"
   | "admin.signed_in"
   | "admin.signed_out"
-  | "admin.sign_in_failed";
+  | "admin.sign_in_failed"
+  | "admin.two_factor_enrolled"
+  | "admin.recovery_codes_reset"
+  | "admin.recovery_code_used"
+  // Written by scripts/admin-user.mjs (actor "system").
+  | "admin.created"
+  | "admin.password_reset"
+  | "admin.two_factor_reset"
+  | "admin.disabled"
+  | "admin.enabled"
+  | "system.breaker_tripped";
 
 export interface AuditEntry {
   id: string;
@@ -298,18 +336,69 @@ export interface UnitListPage {
   pageSize: number;
 }
 
+/**
+ * One saved version of a stamp (every save is a new version; removing keeps history). Lets the
+ * admin put back a stamp a sender removed or replaced by mistake (CLIENT_GUIDE §8, versioning).
+ */
+export interface ContentVersion {
+  kind: StampKind;
+  version: number;
+  savedBy: "sender" | "admin";
+  savedAt: ISODate;
+  /** Set when a newer version replaced this one. */
+  supersededAt: ISODate | null;
+  /** Set when the stamp was removed while this was its current version. */
+  removedAt: ISODate | null;
+  /** What the recipient sees right now. */
+  current: boolean;
+  /** One plain line: "6 photos", "Letter, 412 characters", "Voice note, 1:12", "Song: Title · Artist". */
+  summary: string;
+  /** False when a file it needs has already been deleted for good (after 90 days). */
+  restorable: boolean;
+}
+
 export interface UnitDetail {
   unit: Unit;
   contents: ContentMap;
   audit: AuditEntry[];
   reveals: RevealEvent[];
+  /** Newest first. */
+  history: ContentVersion[];
 }
+
+/**
+ * generated → encoded (the factory wrote and locked the chips; permanent) or void (the CSV was
+ * lost before encoding: its codes stop working). An encoded batch can never be voided.
+ */
+export type BatchStatus = "generated" | "encoded" | "void";
 
 export interface Batch {
   id: string;
   label: string;
   createdAt: ISODate;
   count: number;
+  status: BatchStatus;
+  /** Characters after "SAUD-" in this batch's codes. */
+  codeLength: number;
+  /** The domain written on this batch's chips; its factory CSV always uses this one. */
+  chipDomain: string;
+  encodedAt: ISODate | null;
+  /** Units in the batch whose code has been redeemed (a batch with any can't be voided). */
+  claimedCount: number;
+}
+
+/** One line of the admin's launch checklist (deployment settings that must be right before launch). */
+export interface ReadinessCheck {
+  id: string;
+  label: string;
+  status: "ok" | "warn" | "fail";
+  /** Plain explanation and the fix. */
+  detail: string;
+}
+
+export interface Readiness {
+  checkedAt: ISODate;
+  checks: ReadinessCheck[];
 }
 
 export interface ProvisionedRow {
@@ -340,8 +429,12 @@ export interface EmailMessage {
 // ─── Service interfaces ────────────────────────────────────────────────────
 
 export interface UnitService {
-  /** Claim a unit with its activation code (case-insensitive, dash optional). Rate limited. */
-  claim(code: string): Promise<ServiceResult<ClaimResult>>;
+  /**
+   * Claim a unit with its activation code (case-insensitive, dash optional). Rate limited. When
+   * guessing at scale trips the breaker it fails with `challenge_required`: show the bot check
+   * and call again with its token.
+   */
+  claim(code: string, opts?: { challengeToken?: string }): Promise<ServiceResult<ClaimResult>>;
   /** [O6] Attach an email to a claimed unit for link recovery. */
   saveSenderEmail(token: string, email: string): Promise<ServiceResult<void>>;
   /**
@@ -391,10 +484,22 @@ export interface RevealService {
 }
 
 export interface AdminService {
-  /** `otp` = TOTP code once 2FA is enabled in Phase 3 [PROPOSED, AQ5]. */
+  /**
+   * `otp` = a 6-digit authenticator code or a recovery code. With 2FA on and an authenticator
+   * enrolled, a right password without it fails `unauthorized` with detail "otp_required".
+   */
   signIn(email: string, password: string, otp?: string): Promise<ServiceResult<AdminSession>>;
   signOut(): Promise<void>;
   getSession(): Promise<AdminSession | null>;
+  getSecurity(): Promise<ServiceResult<AdminSecurity>>;
+  /** Start authenticator enrolment (also available to a session that is still `enrol`). */
+  startTwoFactor(): Promise<ServiceResult<TwoFactorSetup>>;
+  /** Prove the authenticator works; returns 10 single-use recovery codes, shown this once. */
+  confirmTwoFactor(pending: string, code: string): Promise<ServiceResult<{ recoveryCodes: string[] }>>;
+  /** Replace every recovery code (needs a current authenticator code). */
+  regenerateRecoveryCodes(code: string): Promise<ServiceResult<{ recoveryCodes: string[] }>>;
+  /** Settings that must be right before launch (chip domain, code length, email, 2FA, jobs…). */
+  getReadiness(): Promise<ServiceResult<Readiness>>;
   getStats(): Promise<ServiceResult<AdminStats>>;
   listUnits(query: UnitListQuery): Promise<ServiceResult<UnitListPage>>;
   getUnit(unitId: string): Promise<ServiceResult<UnitDetail>>;
@@ -406,10 +511,17 @@ export interface AdminService {
   emailCode(unitId: string, to: string): Promise<ServiceResult<EmailMessage>>;
   setPath(unitId: string, path: DeliveryPath): Promise<ServiceResult<void>>;
   removeContent(unitId: string, kind: StampKind, photoId?: string): Promise<ServiceResult<void>>;
+  /** Make an earlier version of a stamp current again (saved as a new version; logged). */
+  restoreContent(unitId: string, kind: StampKind, version: number): Promise<ServiceResult<void>>;
+  /** Batches, newest first, void ones included. */
   listBatches(): Promise<ServiceResult<Batch[]>>;
   /** Generate `count` units with unique, random, non-sequential codes and slugs. */
   generateBatch(count: number, label: string): Promise<ServiceResult<{ batch: Batch; rows: ProvisionedRow[] }>>;
   exportBatchCsv(batchId: string): Promise<ServiceResult<string>>;
+  /** The factory has written and locked the chips. Permanent: the batch can never be voided after. */
+  markBatchEncoded(batchId: string): Promise<ServiceResult<Batch>>;
+  /** The CSV was lost before encoding: its codes stop working. Refused once encoded or claimed. */
+  voidBatch(batchId: string): Promise<ServiceResult<Batch>>;
 }
 
 export interface EmailService {

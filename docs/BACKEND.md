@@ -47,8 +47,8 @@ Nothing in the screens changes between the two. Decision record: `DECISIONS.md` 
 
 ```bash
 npm run build && npx next start -p 3200      # second terminal
-npm run api:smoke -- --base http://localhost:3200   # 51 API checks: claim → uploads → stamps → seal → reveal → admin
-npm run api:e2e   -- --base http://localhost:3200   # the same journey in a real browser, ~21 checks (add --engine webkit)
+npm run api:smoke -- --base http://localhost:3200   # ~94 API checks: claim → uploads → conversion → stamps → seal → reveal → admin (2FA, history, batches) → cron
+npm run api:e2e   -- --base http://localhost:3200   # the same journey in a real browser, ~32 checks (add --engine webkit)
 ```
 
 `scripts/e2e.mjs` keeps testing the mock prototype (it needs a build without `NEXT_PUBLIC_DATA_SOURCE=api`).
@@ -82,20 +82,31 @@ and 20/20 in WebKit (the voice step needs a real iPhone: the Windows WebKit buil
 - **The presenter's Demo Panel** only exists on mock data. On the real backend, the admin panel does that job
   (reset reveal, reset code, statuses, the email log).
 
-## 4. Not built yet (Phase 3, before launch)
+## 4. Launch work: status (16 Oct, DECISIONS D-083)
 
-| Item | Why it matters | Notes |
+Everything that was listed here as "not built yet" is built and tested. What remains needs Saudade's accounts or
+answers (`LAUNCH_READINESS.md` §2).
+
+| Item | Status | Where |
 | --- | --- | --- |
-| Server-side media normalisation (sharp / ffmpeg) | Voice notes recorded on Android (WebM/Opus) may not play on older iPhones; photos are already compressed in the browser | `ARCHITECTURE.md` §7. Until then the verified original is served. |
-| Email delivery | Recover link, "email me my link", Path B codes | Needs the domain (O2) + Resend (or Supabase SMTP) |
-| Off-provider backups + restore drill | "Codes never expire" | Supabase Pro gives daily backups (7 days); add the nightly dump to a second provider (§10) |
-| Purge / song-check / cleanup jobs | 90-day media purge, removed tracks, old rate-limit rows | Supabase cron or Vercel Cron (§6.6) |
-| Admin 2FA (TOTP) | Admin can read every envelope | [PROPOSED AQ5]; columns exist |
-| Turnstile on the global claim breaker | Guessing at scale | §9.2; 8-character codes (O9) matter more |
-| Security headers (CSP, HSTS) | Defence in depth | §9.3 |
-| Hosting in the client's accounts | Ownership (proposal §02) | Vercel/Render + Supabase under Zeya's email, at handover |
+| Media normalisation (sharp / ffmpeg) | **Built.** Photos → display JPEG + WebP thumbnail, no metadata; voice → AAC/m4a with the duration measured on the server; raw uploads deleted after 7 days. A platform failure serves the verified original and retries | `lib/server/media-pipeline.ts`, `media-jobs.ts` |
+| Email delivery | **Built** (Resend). Needs the domain (O2) and `RESEND_API_KEY` | `lib/server/email.ts` |
+| Off-provider backups + restore drill | **Built and drilled locally.** Needs B2 + GitHub secrets | `BACKUPS.md` |
+| Purge / song-check / cleanup jobs | **Built**: nightly `/api/cron/daily` (Vercel Cron) | `lib/server/ops.ts`, HANDOVER §6 |
+| Admin 2FA (TOTP) | **Built**: on when `TOTP_ENC_KEY` is set | Admin → Security, HANDOVER §8 |
+| Turnstile on the global claim breaker | **Built**: on when its keys are set | `app/api/claim`, HANDOVER §10 |
+| Security headers (CSP, HSTS) | **Built** | `next.config.ts` |
+| Hosting in the client's accounts | At handover | HANDOVER §2–3 |
 
-## 5. Costs (to restate to the client)
+## 5. Testing without Supabase
+
+`npm run storage:stub` starts an in-memory stand-in for Supabase Storage (`scripts/test/storage-stub.mjs`, tests
+only). With a local PostgreSQL 15 prepared like Supabase (roles `anon` and `authenticated`, schema `extensions`),
+`SUPABASE_URL=http://127.0.0.1:54330` and `DATABASE_URL` pointing at it, `npm run db:setup -- --env-file <file>
+--no-demo`, a build with `NEXT_PUBLIC_DATA_SOURCE=api`, and `npm run api:smoke` run the whole backend locally. CI
+does exactly this on every push (`.github/workflows/ci.yml`).
+
+## 6. Costs (to restate to the client)
 
 Supabase **Free** is enough for the demo (it pauses after a week without visits). For launch: Supabase **Pro $25/month**
 (8 GB database, 100 GB files, daily backups kept 7 days) + hosting (~$20/month on Vercel Pro) ≈ **$45–50/month at 300

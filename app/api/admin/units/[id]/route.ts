@@ -1,11 +1,13 @@
 /**
- * GET   /api/admin/units/{id}             → 200 UnitDetail (unit, current contents, audit, reveals)
+ * GET   /api/admin/units/{id}             → 200 UnitDetail (unit, current contents, audit, reveals,
+ *                                           every saved version of every stamp)
  * PATCH /api/admin/units/{id} { path }    → 204 (an unassigned unit becomes "assigned")
  */
 import { toAudit, toUnit, UUID, type AuditRow } from "@/lib/server/admin";
 import { requireAdmin } from "@/lib/server/admin-auth";
 import { isoReq, sql, tx } from "@/lib/server/db";
-import { audit, currentContents, unitById } from "@/lib/server/envelopes";
+import { audit, contentHistory, currentContents, unitById } from "@/lib/server/envelopes";
+import { withSongAvailability } from "@/lib/server/songs";
 import { ApiError, body, json, noContent, route } from "@/lib/server/http";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
@@ -31,7 +33,8 @@ export const GET = route<Ctx>(async (req: NextRequest, ctx) => {
     where unit_id = ${id} and outcome = 'revealed' order by at desc`;
   return json({
     unit: toUnit(unit),
-    contents: await currentContents(sql(), id),
+    contents: await withSongAvailability(sql(), await currentContents(sql(), id)),
+    history: await contentHistory(sql(), id),
     audit: audits.map(toAudit),
     reveals: reveals.map((r) => ({
       id: r.id,

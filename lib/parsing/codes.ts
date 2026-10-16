@@ -1,8 +1,8 @@
 /**
  * Activation codes, NFC slugs, and sender tokens. Pure functions; safe on server and client.
  *
- * Code format: SAUD-XXXX (prototype; see OPEN_QUESTIONS O9 for SAUD-XXXX-XXXX in production).
- * Case-insensitive, dash optional, alphabet excludes 0/O and 1/I/L.
+ * Code format: SAUD-XXXX, or SAUD-XXXX-XXXX when site.codes.length is 8 (OPEN_QUESTIONS O9).
+ * Case-insensitive, dashes optional, alphabet excludes 0/O and 1/I/L.
  */
 import { site } from "@/config/site";
 
@@ -40,7 +40,7 @@ export function formatCode(body: string): string {
   return `${prefix}-${(body.match(/.{1,4}/g) ?? [body]).join("-")}`;
 }
 
-/** Normalise to canonical SAUD-XXXX, or null if not a well-formed code. */
+/** Normalise to canonical SAUD-XXXX (or SAUD-XXXX-XXXX), or null if not a well-formed code. */
 export function normaliseCode(input: string): string | null {
   const c = checkCode(input);
   return c.status === "complete" ? c.code : null;
@@ -80,8 +80,15 @@ export function randomString(chars: string, len: number): string {
   return out.join("");
 }
 
+/**
+ * A fresh random code. Bodies that begin with the prefix itself ("SAUD…", 1 in ~923,000) are
+ * redrawn, so someone typing "SAUD" into the boxes is always a mistake the input can point out.
+ */
 export function generateCode(): string {
-  return formatCode(randomString(alphabet, length));
+  let body: string;
+  do body = randomString(alphabet, length);
+  while (body.startsWith(prefix.slice(0, length)));
+  return formatCode(body);
 }
 
 export function generateSlug(): string {

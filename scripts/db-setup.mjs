@@ -166,6 +166,9 @@ const DEMO_LABEL = "Demo run · showcase";
 const [existing] = await sql`select id from batches where label = ${DEMO_LABEL}`;
 if (args.has("--no-demo") || args.has("--no-storage")) {
   console.log("• Skipping demo data (--no-demo)");
+} else if (process.env.NEXT_PUBLIC_CODE_LENGTH?.trim() === "8") {
+  // The demo codes (SAUD-3K7M…) are 4 characters; an 8-character build could never claim them.
+  console.log("• Skipping demo data: this env uses 8-character codes (NEXT_PUBLIC_CODE_LENGTH=8); the demo codes are 4");
 } else if (existing) {
   console.log("✓ Demo data already present (use --reset --yes to start over)");
 } else {

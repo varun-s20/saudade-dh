@@ -5,10 +5,16 @@
  * The mock-data journey (Demo Panel, IndexedDB) stays in scripts/e2e.mjs.
  *
  *   npm run api:e2e -- --base http://localhost:3200 [--engine webkit] [--skip-media] [--out dir]
+ *
+ * With DATABASE_URL in the env file it uses two throwaway admins: one for the Node-side API calls,
+ * one that signs in through the browser (and, when two-factor sign-in is on, sets up its
+ * authenticator through the Security page, then signs in again with a code). Both are disabled at
+ * the end. Any Content-Security-Policy violation in any page fails the run.
  */
 import { chromium, webkit } from "playwright-core";
 import fs from "node:fs";
 import path from "node:path";
+import { connect, tempAdmin, totp } from "./lib/ops-common.mjs";
 
 const args = process.argv.slice(2);
 const opt = (n, d) => (args.includes(`--${n}`) ? args[args.indexOf(`--${n}`) + 1] : d);
@@ -18,7 +24,11 @@ const OUT = path.resolve(opt("out", ".e2e-api"));
 const SKIP_MEDIA = args.includes("--skip-media");
 const envFile = opt("env-file", path.join(process.cwd(), ".env.local"));
 if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
-const ADMIN = { email: (process.env.ADMIN_EMAIL || "zeya@saudade.example").toLowerCase(), password: process.env.ADMIN_PASSWORD };
+const db = process.env.DATABASE_URL ? connect() : null;
+const apiAdmin = db ? await tempAdmin(db, "e2e-api") : null;
+const uiAdmin = db ? await tempAdmin(db, "e2e-ui") : null;
+const ADMIN = apiAdmin ?? { email: (process.env.ADMIN_EMAIL || "zeya@saudade.example").toLowerCase(), password: process.env.ADMIN_PASSWORD };
+const BROWSER_ADMIN = uiAdmin ?? ADMIN;
 fs.mkdirSync(OUT, { recursive: true });
 
 let passed = 0;
@@ -54,10 +64,21 @@ const errors = [];
  * "… due to access control checks." That is the test navigating away mid-load, not an app error;
  * Chromium reports nothing for the same journey.
  */
+/** Every page, so a crash can be photographed for diagnosis. */
+const open = [];
 const real = (msg) => !/due to access control checks/.test(msg);
+/** Every page reports CSP violations: the policy in next.config.ts must allow everything the app uses. */
+const watchCsp = (page, who) =>
+  page.on("console", (m) => m.type() === "error" && /Content Security Policy|Refused to (load|execute|connect|frame|apply)/i.test(m.text()) && errors.push(`${who} CSP: ${m.text().slice(0, 200)}`));
 
 try {
-  check("admin api: sign in", (await admin("POST", "/api/admin/session", ADMIN)).status === 200);
+  const signin = await admin("POST", "/api/admin/session", ADMIN);
+  check("admin api: sign in", signin.status === 200);
+  if (signin.data?.twoFactor === "enrol") {
+    const setup = await admin("POST", "/api/admin/2fa/setup");
+    const done = await admin("POST", "/api/admin/2fa/confirm", { pending: setup.data?.pending, code: totp(setup.data?.secret ?? "") });
+    check("admin api: two-factor set up for the API admin", done.status === 200);
+  }
   const batch = await admin("POST", "/api/admin/batches", { count: 1, label: `Journey ${ENGINE} ${new Date().toISOString().slice(0, 16)}` });
   const code = batch.data?.rows?.[0]?.code;
   check("admin api: fresh unit for this run", Boolean(code), code ?? `status ${batch.status}`);
@@ -65,7 +86,9 @@ try {
   // ── The sender's phone ───────────────────────────────────────────────────
   const senderCtx = await browser.newContext(phone);
   const s = await senderCtx.newPage();
+  open.push(["sender", s]);
   s.on("pageerror", (e) => real(e.message) && errors.push(`sender: ${e.message}`));
+  watchCsp(s, "sender");
   if (args.includes("--trace")) {
     s.on("requestfailed", (q) => console.log("  trace REQFAILED", q.method(), q.url().replace(/token=[^&]+/, "token=…").slice(0, 100), q.failure()?.errorText));
     s.on("response", (q) => /\/api\/|supabase/.test(q.url()) && console.log("  trace", q.request().method(), q.status(), q.url().replace(/token=[^&]+/, "token=…").slice(0, 100)));
@@ -124,7 +147,9 @@ try {
   // ── The recipient's phone (a different device: no sender link on it) ─────
   const recCtx = await browser.newContext(phone);
   const r = await recCtx.newPage();
+  open.push(["recipient", r]);
   r.on("pageerror", (e) => real(e.message) && errors.push(`recipient: ${e.message}`));
+  watchCsp(r, "recipient");
   await r.goto(`${BASE}/t/${slug}`, { waitUntil: "networkidle" });
   await r.waitForTimeout(2600);
   check("first tap: prompt shown", await r.getByText(/Someone who misses you sent this/i).first().isVisible().catch(() => false));
@@ -168,19 +193,73 @@ try {
   // ── Admin in the browser ─────────────────────────────────────────────────
   const adminCtx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const a = await adminCtx.newPage();
+  open.push(["admin", a]);
   a.on("pageerror", (e) => real(e.message) && errors.push(`admin: ${e.message}`));
+  watchCsp(a, "admin");
   await a.goto(`${BASE}/admin`, { waitUntil: "networkidle" });
   check("admin: no demo credentials shown on the real backend", !(await a.getByText(/demo sign-in/i).first().isVisible().catch(() => false)));
-  await a.getByLabel(/^Email/i).fill(ADMIN.email);
-  await a.getByLabel(/^Password/i).fill(ADMIN.password);
-  await a.keyboard.press("Enter");
-  await a.waitForURL(/\/admin\/dashboard/, { timeout: 20000 }).catch(() => {});
+  const signInUi = async (otp) => {
+    await a.getByLabel(/^Email/i).fill(BROWSER_ADMIN.email);
+    await a.getByLabel(/^Password/i).fill(BROWSER_ADMIN.password);
+    await a.keyboard.press("Enter");
+    if (otp) {
+      await a.getByLabel(/6-digit code/i).waitFor({ timeout: 15000 });
+      await a.getByLabel(/6-digit code/i).fill(otp());
+      await a.getByRole("button", { name: /Verify and sign in/i }).click();
+    }
+  };
+  await signInUi();
+  await a.waitForURL(/\/admin\/(dashboard|security)/, { timeout: 20000 }).catch(() => {});
+  if (/\/admin\/security/.test(a.url())) {
+    // Two-factor sign-in is on: a first sign-in must set up the authenticator before anything else.
+    check("2fa: a first sign-in is held on the Security page", await seen(a.getByText(/Set up your authenticator/i)));
+    await a.getByRole("button", { name: /Start set-up/i }).click();
+    check("2fa: QR code shown", await seen(a.getByRole("img", { name: /QR code/i })));
+    const secret = (await a.locator("p.select-all").first().innerText()).replace(/\s+/g, "");
+    await a.screenshot({ path: path.join(OUT, `${ENGINE}-06a-enrol.png`) });
+    await a.getByLabel(/Code from the app/i).fill(totp(secret));
+    await a.getByRole("button", { name: /^Confirm$/ }).click();
+    check("2fa: ten recovery codes shown once", (await seen(a.getByText(/Save your recovery codes/i))) && (await a.locator('[aria-label="Recovery codes"] li').count()) === 10);
+    await a.getByLabel(/saved these somewhere safe/i).check();
+    await a.getByRole("button", { name: /^Continue$/ }).click();
+    await a.waitForURL(/\/admin\/dashboard/, { timeout: 20000 }).catch(() => {});
+    check("2fa: …then on to the dashboard", /\/admin\/dashboard/.test(a.url()));
+    await a.getByRole("button", { name: /Sign out/i }).click();
+    await a.waitForURL(/\/admin$/, { timeout: 15000 }).catch(() => {});
+    // Let the sign-in page hydrate first: typing into server HTML is reset by hydration (WebKit is slow enough to hit it).
+    await a.waitForLoadState("networkidle");
+    await signInUi(() => totp(secret, 1)); // the next step's code: the enrolment code can't be replayed
+    await a.waitForURL(/\/admin\/dashboard/, { timeout: 20000 }).catch(() => {});
+    check("2fa: signs in again with a code from the app", /\/admin\/dashboard/.test(a.url()));
+  }
   check("admin: signed in to the dashboard", /\/admin\/dashboard/.test(a.url()));
+  check("admin: the launch checklist is on the dashboard", await seen(a.getByRole("heading", { name: /Launch checklist/i })));
   await a.waitForLoadState("networkidle"); // WebKit reports fetches cancelled by navigating away as page errors
+  await a.screenshot({ path: path.join(OUT, `${ENGINE}-06b-dashboard.png`), fullPage: true });
+
+  // A second letter from the sender, so there is an earlier version to restore.
+  await fetch(`${BASE}/api/sender/contents/letter`, {
+    method: "PUT",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ kind: "letter", to: "", body: "A second draft that replaced the first.", signoff: "", from: "" }),
+  });
   const found = await admin("GET", `/api/admin/units?search=${encodeURIComponent(slug.slice(0, 8))}`);
   await a.goto(`${BASE}/admin/units/${found.data.items[0].id}`, { waitUntil: "networkidle" });
   check("admin: unit detail shows the opened envelope", await seen(a.getByText(/Opened|Revealed/i), 10000));
+  check("admin: history lists the earlier letter", await seen(a.getByText(/Letter v1/)));
+  await a.getByRole("button", { name: /Restore…/ }).first().click();
+  await a.getByRole("button", { name: /^Restore$/ }).click();
+  check("admin: restore → toast", await seen(a.getByText(/Letter restored/i)));
+  const restored = await (await fetch(`${BASE}/api/t/${slug}`)).json();
+  check("admin: …the recipient sees the first letter again", /raining here/.test(restored.contents?.letter?.content?.body ?? ""));
   await a.screenshot({ path: path.join(OUT, `${ENGINE}-06-admin-unit.png`), fullPage: true });
+
+  await a.goto(`${BASE}/admin/batch`, { waitUntil: "networkidle" });
+  const row = a.locator("li", { hasText: `Journey ${ENGINE}` }).first();
+  await row.getByRole("button", { name: /Mark encoded/i }).click();
+  await a.getByRole("button", { name: /^Mark encoded$/ }).click();
+  check("batches: marked encoded, no void button any more", (await seen(row.getByText(/^Encoded$/))) && !(await row.getByRole("button", { name: /Void/ }).isVisible().catch(() => false)));
+  await a.screenshot({ path: path.join(OUT, `${ENGINE}-07-batches.png`), fullPage: true });
 
   // ── Lost link ────────────────────────────────────────────────────────────
   await s.goto(`${BASE}/recover`, { waitUntil: "networkidle" });
@@ -196,8 +275,13 @@ try {
 } catch (e) {
   failed++;
   console.log(`FAIL [${ENGINE}] crashed: ${e instanceof Error ? e.message : e}`);
+  for (const [who, pg] of open) await pg.screenshot({ path: path.join(OUT, `${ENGINE}-crash-${who}.png`) }).catch(() => {});
 }
 
 await browser.close();
+if (db) {
+  for (const t of [apiAdmin, uiAdmin]) await t?.disable();
+  await db.end();
+}
 console.log(`\n${passed}/${passed + failed} checks passed. Screenshots: ${OUT}`);
 process.exit(failed ? 1 : 0);

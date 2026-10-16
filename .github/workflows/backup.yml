@@ -1,0 +1,401 @@
+# ════════════════════════════════════════════════════════════════════════════
+# SAUDADE · nightly off-provider backups (runbook: docs/BACKUPS.md)
+#
+#   database  pg_dump of the app's `public` schema from Supabase, age-encrypted, to Backblaze B2:
+#             db/YYYY/MM/saudade-<stamp>.dump.age + .manifest.json, db/latest-manifest.json, and the first
+#             backup of each month again under db-monthly/YYYY/MM/. Fails loudly if `units` went down.
+#   media     rclone COPY (never sync: nothing in the backup is ever deleted) of the private Supabase
+#             Storage bucket to B2 media/, then checks every object is there.
+#   report    optional: POSTs the outcome (counts only) to the app for the admin's launch checklist.
+#
+# Repository secrets (Settings → Secrets and variables → Actions). Missing required ones fail the job.
+#   BACKUP_DATABASE_URL          Supabase → Connect → Session pooler URI (port 5432), password filled in.
+#                                Not the transaction pooler (6543: pg_dump cannot use it). Not the direct
+#                                db.<ref>.supabase.co host (IPv6 only; GitHub runners have no IPv6).
+#   BACKUP_AGE_RECIPIENT         age PUBLIC key (age1…). The private key is offline only (vault + paper).
+#   BACKUP_S3_ENDPOINT           B2 S3 endpoint, e.g. https://s3.us-west-004.backblazeb2.com
+#   BACKUP_S3_REGION             B2 region, e.g. us-west-004
+#   BACKUP_S3_BUCKET             B2 bucket name (private, Object Lock on), e.g. saudade-backups
+#   BACKUP_S3_ACCESS_KEY_ID      B2 application keyID: listBuckets,listFiles,readFiles,writeFiles (NO deleteFiles)
+#   BACKUP_S3_SECRET_ACCESS_KEY  B2 applicationKey for that key
+#   MEDIA_S3_ENDPOINT            Supabase → Storage → S3 connection endpoint: https://<ref>.supabase.co/storage/v1/s3
+#   MEDIA_S3_REGION              Supabase project region shown on that page, e.g. ap-southeast-2
+#   MEDIA_S3_ACCESS_KEY_ID       Supabase Storage S3 access key id
+#   MEDIA_S3_SECRET_ACCESS_KEY   Supabase Storage S3 secret access key
+#   MEDIA_BUCKET                 optional, default "media"
+#   BACKUP_REPORT_URL            optional, e.g. https://<app-domain>/api/cron/backup-report
+#   BACKUP_REPORT_TOKEN          optional, the app's CRON_SECRET (sent as "Authorization: Bearer …")
+#                                The report runs only when both are set.
+# ════════════════════════════════════════════════════════════════════════════
+name: Backups
+
+on:
+  schedule:
+    - cron: "30 2 * * *" # 02:30 UTC every day
+  workflow_dispatch:
+    inputs:
+      accept_units_drop:
+        description: "Accept a lower units count than the previous backup (only after finding out why)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: saudade-backups
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  # AWS CLI v2 defaults to new checksum headers that some S3-compatible stores reject; send them only when required.
+  AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+  AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+  AWS_EC2_METADATA_DISABLED: "true"
+
+jobs:
+  database:
+    name: Database → B2
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      db_bytes: ${{ steps.dump.outputs.db_bytes }}
+      units: ${{ steps.dump.outputs.units }}
+      problem: ${{ steps.secrets.outputs.problem || steps.install.outputs.problem || steps.dump.outputs.problem || steps.upload.outputs.problem || steps.latest.outputs.problem }}
+    steps:
+      - name: Check the secrets are set
+        id: secrets
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+          BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          BACKUP_S3_REGION: ${{ secrets.BACKUP_S3_REGION }}
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+        run: |
+          set -euo pipefail
+          missing=""
+          for name in BACKUP_DATABASE_URL BACKUP_AGE_RECIPIENT BACKUP_S3_ENDPOINT BACKUP_S3_REGION \
+                      BACKUP_S3_BUCKET BACKUP_S3_ACCESS_KEY_ID BACKUP_S3_SECRET_ACCESS_KEY; do
+            if [ -z "${!name:-}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "problem=missing secrets:$missing" >> "$GITHUB_OUTPUT"
+            echo "::error title=Database backup is not configured::Missing repository secrets:$missing. Nothing was backed up. See docs/BACKUPS.md §3."
+            exit 1
+          fi
+          echo "All database backup secrets are set."
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install the PostgreSQL 17 client (apt.postgresql.org) and age
+        id: install
+        run: |
+          set -euo pipefail
+          trap 'echo "problem=could not install the PostgreSQL client or age" >> "$GITHUB_OUTPUT"' ERR
+          # pg_dump must be >= the server's major version (Supabase runs 15 or 17).
+          if ! grep -rqs 'apt.postgresql.org' /etc/apt/sources.list /etc/apt/sources.list.d/; then
+            sudo install -d /usr/share/postgresql-common/pgdg
+            sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+              https://www.postgresql.org/media/keys/ACCC4CF8.asc
+            . /etc/os-release
+            echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+              | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          fi
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends postgresql-client-17 age
+          # Use the 17 binaries directly (the /usr/bin wrappers may pick the runner's preinstalled 16).
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+          /usr/lib/postgresql/17/bin/pg_dump --version
+          age --version
+
+      - name: Dump, check and encrypt (scripts/backup/backup-db.sh)
+        id: dump
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+          OUT_DIR: ${{ runner.temp }}/backup-out
+        run: |
+          set -euo pipefail
+          if ! bash scripts/backup/backup-db.sh; then
+            echo "problem=database dump failed (see the run log)" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          m="$OUT_DIR/manifest.json"
+          echo "db_bytes=$(jq -r '.file.bytes' "$m")" >> "$GITHUB_OUTPUT"
+          echo "units=$(jq -r '.row_counts.units // empty' "$m")" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Database backup"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Snapshot | $(jq -r '.created_at' "$m") |"
+            echo "| File | \`$(jq -r '.file.name' "$m")\`, $(numfmt --to=iec-i --suffix=B "$(jq -r '.file.bytes' "$m")") |"
+            echo "| Server | PostgreSQL $(jq -r '.server_version' "$m"), $(jq -r '.pg_dump_version' "$m") |"
+            echo "| Migrations | $(jq -r '.migrations | join(", ")' "$m") |"
+            echo "| Rows | $(jq -r '.total_rows' "$m") in $(jq -r '.row_counts | length' "$m") tables |"
+            echo
+            echo "| Table | Rows |"
+            echo "| --- | ---: |"
+            jq -r '.row_counts | to_entries[] | "| `\(.key)` | \(.value) |"' "$m"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the dump and manifest to B2 (db/YYYY/MM/)
+        id: upload
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.BACKUP_S3_REGION }}
+          S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          DUMP_FILE: ${{ steps.dump.outputs.dump_file }}
+          DUMP_NAME: ${{ steps.dump.outputs.dump_name }}
+          MANIFEST_FILE: ${{ steps.dump.outputs.manifest_file }}
+          STAMP: ${{ steps.dump.outputs.stamp }}
+        run: |
+          set -euo pipefail
+          fail() { echo "problem=$1" >> "$GITHUB_OUTPUT"; echo "::error title=Upload to B2 failed::$1"; exit 1; }
+          s3cp() { aws s3 cp --endpoint-url "$S3_ENDPOINT" --only-show-errors --no-progress "$@"; }
+          prefix="db/${STAMP:0:4}/${STAMP:4:2}"
+          s3cp "$DUMP_FILE" "s3://$S3_BUCKET/$prefix/$DUMP_NAME" || fail "upload of the dump failed"
+          s3cp --content-type application/json "$MANIFEST_FILE" "s3://$S3_BUCKET/$prefix/saudade-$STAMP.manifest.json" \
+            || fail "upload of the manifest failed"
+          remote=$(aws s3api head-object --endpoint-url "$S3_ENDPOINT" --bucket "$S3_BUCKET" \
+                     --key "$prefix/$DUMP_NAME" --query ContentLength --output text) || fail "the uploaded dump cannot be read back"
+          [ "$remote" = "$(stat -c %s "$DUMP_FILE")" ] || fail "the uploaded dump has the wrong size ($remote bytes)"
+          echo "Uploaded $prefix/$DUMP_NAME ($remote bytes) and its manifest."
+
+      - name: Compare units with the previous backup, then update latest-manifest.json
+        id: latest
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.BACKUP_S3_REGION }}
+          S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          DUMP_FILE: ${{ steps.dump.outputs.dump_file }}
+          DUMP_NAME: ${{ steps.dump.outputs.dump_name }}
+          MANIFEST_FILE: ${{ steps.dump.outputs.manifest_file }}
+          STAMP: ${{ steps.dump.outputs.stamp }}
+          ACCEPT_UNITS_DROP: ${{ inputs.accept_units_drop && 'true' || 'false' }}
+        run: |
+          set -euo pipefail
+          fail() { echo "problem=$1" >> "$GITHUB_OUTPUT"; echo "::error title=$2::$3"; exit 1; }
+          s3cp() { aws s3 cp --endpoint-url "$S3_ENDPOINT" --only-show-errors --no-progress "$@"; }
+
+          new=$(jq -r '.row_counts.units // empty' "$MANIFEST_FILE")
+          [[ $new =~ ^[0-9]+$ ]] || fail "the new manifest has no units count" "Bad manifest" "The new manifest has no row count for units."
+
+          # The previous backup's manifest. Missing only on the very first run.
+          prev="$RUNNER_TEMP/previous-latest-manifest.json"
+          old=""
+          if s3cp "s3://$S3_BUCKET/db/latest-manifest.json" "$prev" 2> "$RUNNER_TEMP/previous.err"; then
+            old=$(jq -r '.row_counts.units // empty' "$prev")
+            echo "Previous backup: $(jq -r '.created_at' "$prev"), units $old. Tonight: units $new."
+          elif grep -Eqi '\(404\)|not found|nosuchkey|does not exist' "$RUNNER_TEMP/previous.err"; then
+            echo "::notice title=First backup::There is no db/latest-manifest.json yet, so there is nothing to compare with."
+          else
+            cat "$RUNNER_TEMP/previous.err" >&2
+            fail "could not read the previous latest-manifest.json" "Previous manifest unreadable" \
+              "Could not download db/latest-manifest.json to compare the units count. Tonight's dump is uploaded."
+          fi
+
+          # Units are never deleted: fewer units than last night means data loss or the wrong database.
+          if [[ $old =~ ^[0-9]+$ ]] && (( new < old )); then
+            if [[ $ACCEPT_UNITS_DROP == true ]]; then
+              echo "::warning title=Units count dropped (accepted)::units went from $old to $new; accepted by the person who ran this workflow."
+            else
+              { echo; echo "**FAILED: \`units\` dropped from $old to $new.** \`db/latest-manifest.json\` was not updated."; } >> "$GITHUB_STEP_SUMMARY"
+              fail "units count dropped from $old to $new" "Units count dropped" \
+                "units went from $old to $new rows. Units are never deleted, so this means data loss or the wrong database. Tonight's dump IS uploaded (db/${STAMP:0:4}/${STAMP:4:2}/); db/latest-manifest.json was NOT updated. See docs/BACKUPS.md §4."
+            fi
+          fi
+
+          s3cp --content-type application/json "$MANIFEST_FILE" "s3://$S3_BUCKET/db/latest-manifest.json" \
+            || fail "could not update latest-manifest.json" "Upload to B2 failed" "Could not update db/latest-manifest.json."
+          echo "Updated db/latest-manifest.json."
+
+          # Monthly copy: the first good backup of each month is kept a year (lifecycle rule on db-monthly/).
+          month="${STAMP:0:4}/${STAMP:4:2}"
+          rc=0
+          listing=$(aws s3 ls --endpoint-url "$S3_ENDPOINT" "s3://$S3_BUCKET/db-monthly/$month/") || rc=$?
+          (( rc <= 1 )) || fail "could not list db-monthly/" "Monthly copy failed" "Could not list db-monthly/$month/."
+          if ! grep -q '\.dump\.age$' <<< "$listing"; then
+            s3cp "$DUMP_FILE" "s3://$S3_BUCKET/db-monthly/$month/$DUMP_NAME" \
+              || fail "monthly copy failed" "Monthly copy failed" "Could not upload db-monthly/$month/$DUMP_NAME."
+            s3cp --content-type application/json "$MANIFEST_FILE" "s3://$S3_BUCKET/db-monthly/$month/saudade-$STAMP.manifest.json" \
+              || fail "monthly copy failed" "Monthly copy failed" "Could not upload the monthly manifest."
+            echo "Kept as the monthly copy for $month."
+            { echo; echo "Kept as the monthly copy for $month (\`db-monthly/\`)."; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  media:
+    name: Media → B2
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    outputs:
+      media_objects: ${{ steps.copy.outputs.media_objects }}
+      problem: ${{ steps.secrets.outputs.problem || steps.install.outputs.problem || steps.copy.outputs.problem }}
+    env:
+      RCLONE_VERSION: v1.68.2
+    steps:
+      - name: Check the secrets are set
+        id: secrets
+        env:
+          MEDIA_S3_ENDPOINT: ${{ secrets.MEDIA_S3_ENDPOINT }}
+          MEDIA_S3_REGION: ${{ secrets.MEDIA_S3_REGION }}
+          MEDIA_S3_ACCESS_KEY_ID: ${{ secrets.MEDIA_S3_ACCESS_KEY_ID }}
+          MEDIA_S3_SECRET_ACCESS_KEY: ${{ secrets.MEDIA_S3_SECRET_ACCESS_KEY }}
+          BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          BACKUP_S3_REGION: ${{ secrets.BACKUP_S3_REGION }}
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+        run: |
+          set -euo pipefail
+          missing=""
+          for name in MEDIA_S3_ENDPOINT MEDIA_S3_REGION MEDIA_S3_ACCESS_KEY_ID MEDIA_S3_SECRET_ACCESS_KEY \
+                      BACKUP_S3_ENDPOINT BACKUP_S3_REGION BACKUP_S3_BUCKET BACKUP_S3_ACCESS_KEY_ID BACKUP_S3_SECRET_ACCESS_KEY; do
+            if [ -z "${!name:-}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "problem=missing secrets:$missing" >> "$GITHUB_OUTPUT"
+            echo "::error title=Media backup is not configured::Missing repository secrets:$missing. Nothing was copied. See docs/BACKUPS.md §3."
+            exit 1
+          fi
+          echo "All media backup secrets are set."
+
+      - name: Install rclone ${{ env.RCLONE_VERSION }} (official build, checksum-verified)
+        id: install
+        run: |
+          set -euo pipefail
+          trap 'echo "problem=could not install rclone" >> "$GITHUB_OUTPUT"' ERR
+          cd "$RUNNER_TEMP"
+          zip="rclone-${RCLONE_VERSION}-linux-amd64.zip"
+          curl -fsSLO "https://downloads.rclone.org/${RCLONE_VERSION}/${zip}"
+          curl -fsSL -o rclone-SHA256SUMS "https://downloads.rclone.org/${RCLONE_VERSION}/SHA256SUMS"
+          grep " ${zip}\$" rclone-SHA256SUMS | sha256sum -c -
+          unzip -q "$zip"
+          sudo install -m 0755 "rclone-${RCLONE_VERSION}-linux-amd64/rclone" /usr/local/bin/rclone
+          rclone version
+
+      - name: Copy Supabase Storage → B2 media/ (rclone copy, never sync)
+        id: copy
+        env:
+          # Two remotes, configured only through the environment (no config file with secrets on disk).
+          RCLONE_CONFIG_SUPABASE_TYPE: s3
+          RCLONE_CONFIG_SUPABASE_PROVIDER: Other
+          RCLONE_CONFIG_SUPABASE_ENDPOINT: ${{ secrets.MEDIA_S3_ENDPOINT }}
+          RCLONE_CONFIG_SUPABASE_REGION: ${{ secrets.MEDIA_S3_REGION }}
+          RCLONE_CONFIG_SUPABASE_ACCESS_KEY_ID: ${{ secrets.MEDIA_S3_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_SUPABASE_SECRET_ACCESS_KEY: ${{ secrets.MEDIA_S3_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_SUPABASE_FORCE_PATH_STYLE: "true"
+          RCLONE_CONFIG_SUPABASE_LIST_VERSION: "2"
+          RCLONE_CONFIG_BACKUP_TYPE: s3
+          RCLONE_CONFIG_BACKUP_PROVIDER: Other
+          RCLONE_CONFIG_BACKUP_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          RCLONE_CONFIG_BACKUP_REGION: ${{ secrets.BACKUP_S3_REGION }}
+          RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_BACKUP_LIST_VERSION: "2"
+          RCLONE_CONFIG_BACKUP_NO_CHECK_BUCKET: "true"
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          MEDIA_BUCKET: ${{ secrets.MEDIA_BUCKET || 'media' }}
+        run: |
+          set -euo pipefail
+          fail() { echo "problem=$1" >> "$GITHUB_OUTPUT"; echo "::error title=Media backup failed::$1"; exit 1; }
+          src="supabase:$MEDIA_BUCKET"
+          dst="backup:$BACKUP_S3_BUCKET/media"
+
+          # Object keys are immutable (a new version gets a new key), so size is enough to skip a copied file.
+          # Do not add -v: it logs every key, and media ids are capabilities.
+          rclone copy "$src" "$dst" --size-only --transfers 8 --checkers 16 \
+            --stats 1m --stats-one-line --stats-log-level NOTICE || fail "rclone copy failed (see the run log)"
+
+          # Every object in Supabase must now be in the backup with the same size. Names go to files, not the log.
+          if ! rclone check "$src" "$dst" --one-way --size-only --log-file "$RUNNER_TEMP/rclone-check.log" \
+                 --missing-on-dst "$RUNNER_TEMP/missing.txt" --differ "$RUNNER_TEMP/differ.txt"; then
+            n=$(cat "$RUNNER_TEMP/missing.txt" "$RUNNER_TEMP/differ.txt" 2> /dev/null | wc -l)
+            fail "$n media objects are missing or different in the backup"
+          fi
+
+          src_size=$(rclone size "$src" --json) || fail "could not size the Supabase bucket"
+          dst_size=$(rclone size "$dst" --json) || fail "could not size the backup"
+          src_count=$(jq -r '.count' <<< "$src_size"); src_bytes=$(jq -r '.bytes' <<< "$src_size")
+          dst_count=$(jq -r '.count' <<< "$dst_size"); dst_bytes=$(jq -r '.bytes' <<< "$dst_size")
+          echo "media_objects=$src_count" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Media backup"
+            echo
+            echo "| | Objects | Size |"
+            echo "| --- | ---: | ---: |"
+            echo "| Supabase bucket \`$MEDIA_BUCKET\` | $src_count | $(numfmt --to=iec-i --suffix=B "$src_bytes") |"
+            echo "| B2 \`media/\` (never deleted, so it can hold more) | $dst_count | $(numfmt --to=iec-i --suffix=B "$dst_bytes") |"
+            echo
+            echo "Every Supabase object is in the backup with the same size."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  report:
+    name: Report to the app
+    needs: [database, media]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: POST the outcome to BACKUP_REPORT_URL
+        env:
+          BACKUP_REPORT_URL: ${{ secrets.BACKUP_REPORT_URL }}
+          BACKUP_REPORT_TOKEN: ${{ secrets.BACKUP_REPORT_TOKEN }}
+          DB_RESULT: ${{ needs.database.result }}
+          MEDIA_RESULT: ${{ needs.media.result }}
+          DB_PROBLEM: ${{ needs.database.outputs.problem }}
+          MEDIA_PROBLEM: ${{ needs.media.outputs.problem }}
+          DB_BYTES: ${{ needs.database.outputs.db_bytes }}
+          UNITS: ${{ needs.database.outputs.units }}
+          MEDIA_OBJECTS: ${{ needs.media.outputs.media_objects }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKUP_REPORT_URL:-}" ] || [ -z "${BACKUP_REPORT_TOKEN:-}" ]; then
+            echo "::notice title=Backup report skipped::BACKUP_REPORT_URL and BACKUP_REPORT_TOKEN are not both set, so the app was not told about this run."
+            exit 0
+          fi
+
+          ok=false
+          if [ "$DB_RESULT" = success ] && [ "$MEDIA_RESULT" = success ]; then ok=true; fi
+          error=""
+          if [ "$DB_RESULT" != success ]; then error="database: ${DB_PROBLEM:-job $DB_RESULT}"; fi
+          if [ "$MEDIA_RESULT" != success ]; then error="${error:+$error; }media: ${MEDIA_PROBLEM:-job $MEDIA_RESULT}"; fi
+          num() { if [[ ${1:-} =~ ^[0-9]+$ ]]; then echo "$1"; else echo null; fi; }
+
+          # Counts only. Unknown counts (a job that failed early) are left out: the endpoint takes no nulls.
+          body=$(jq -cn \
+            --argjson ok "$ok" \
+            --argjson dbBytes "$(num "$DB_BYTES")" \
+            --argjson units "$(num "$UNITS")" \
+            --argjson mediaObjects "$(num "$MEDIA_OBJECTS")" \
+            --arg error "${error:0:300}" \
+            '{ok: $ok,
+              summary: ({dbBytes: $dbBytes, units: $units, mediaObjects: $mediaObjects} | with_entries(select(.value != null)))}
+             + (if $ok then {} else {error: $error} end)')
+          echo "Report: $body"
+
+          if curl --silent --show-error --fail-with-body --max-time 30 -X POST \
+               -H "Authorization: Bearer $BACKUP_REPORT_TOKEN" -H "content-type: application/json" \
+               --data "$body" -o "$RUNNER_TEMP/report-response.txt" "$BACKUP_REPORT_URL"; then
+            echo "The app recorded the outcome."
+          else
+            rc=$?
+            reason="curl exit $rc"
+            if [ -s "$RUNNER_TEMP/report-response.txt" ]; then
+              reason="$reason: $(head -c 200 "$RUNNER_TEMP/report-response.txt" | tr -d '\r\n')"
+            fi
+            # A failed report never fails the run: the backup jobs alone decide that.
+            echo "::warning title=Backup report failed::The app was not told about this run ($reason)."
+            { echo "### Backup report"; echo; echo "**Warning:** the app was not told about this run ($reason). The backups themselves are unaffected."; } >> "$GITHUB_STEP_SUMMARY"
+          fi

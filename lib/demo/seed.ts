@@ -44,7 +44,17 @@ export function buildSeed(now: number = Date.now()): DbState {
   const db = emptyDb();
   db.seeded = true;
 
-  const batch: Batch = { id: LAUNCH_BATCH_ID, label: "Launch run · 300", createdAt: iso(21 * DAY), count: 0 };
+  const batch: Batch = {
+    id: LAUNCH_BATCH_ID,
+    label: "Launch run · 300",
+    createdAt: iso(21 * DAY),
+    count: 0,
+    status: "generated",
+    codeLength: site.codes.length,
+    chipDomain: site.chipDomain,
+    encodedAt: null,
+    claimedCount: 0,
+  };
   const units: Record<string, Unit> = {};
   const contents: Record<string, ContentMap> = {};
   const audit: AuditEntry[] = [];

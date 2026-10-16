@@ -6,7 +6,7 @@
  * when the code is accepted. The ticket only mirrors the form, so it's hidden from assistive tech.
  */
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
+import { Fragment, useState, useSyncExternalStore } from "react";
 import type { CodeInputState } from "@/components/forms/CodeInput";
 import { Postmark } from "@/components/paper/Postmark";
 import { Stamp } from "@/components/stamps/Stamp";
@@ -87,16 +87,19 @@ function LiveTicket({ store }: { store: EchoStore }) {
   return (
     <div aria-hidden className="ix-ticket min-w-0 flex-1" data-state={state}>
       <span className="ix-ticket__label">Your activation code</span>
-      <span className="ix-ticket__code">
+      <span className="ix-ticket__code" data-long={chars.length > 4 ? "" : undefined}>
         {site.codes.prefix}-
         {chars.map((c, i) => (
-          <span key={i} className="ix-ticket__slot" data-filled={c ? "" : undefined}>
-            {c && (
-              <span key={c} className="ix-ticket__ch">
-                {c}
-              </span>
-            )}
-          </span>
+          <Fragment key={i}>
+            {i > 0 && i % 4 === 0 && <span className="ix-ticket__sep">-</span>}
+            <span className="ix-ticket__slot" data-filled={c ? "" : undefined}>
+              {c && (
+                <span key={c} className="ix-ticket__ch">
+                  {c}
+                </span>
+              )}
+            </span>
+          </Fragment>
         ))}
       </span>
       <span className="ix-ticket__note">It never expires.</span>

@@ -8,6 +8,7 @@ import { services } from "@/lib/services";
 import { UNIT_STATUSES, type ServiceError } from "@/lib/services/types";
 import { cn } from "@/lib/utils/cn";
 import { AuditList } from "./AuditList";
+import { LaunchChecklist } from "./LaunchChecklist";
 import { StatCard } from "./StatCard";
 import { STATUS_META } from "./StatusChip";
 import { AdminButton, AdminLinkButton, Card, LoadError, PageHeader, SearchInput, Skeleton } from "./ui";
@@ -113,6 +114,10 @@ export function DashboardScreen() {
           † Proposed statuses, pending the client&apos;s approval (O7): assigned, sealed, revealed. Agreed: unassigned, claimed, filled.
         </p>
       </section>
+
+      <div className="mt-8">
+        <LaunchChecklist />
+      </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[2fr_1fr]">
         <Card title="Recent activity" description="The latest changes across every unit." bodyClassName="px-4 py-5 md:px-5" className="order-2 lg:order-none">

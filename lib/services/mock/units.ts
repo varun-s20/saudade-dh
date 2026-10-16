@@ -50,7 +50,9 @@ export const unitService: UnitService = {
     if (isForced("already_claimed")) return fail("already_claimed");
 
     const code = normaliseCode(input);
-    const unit = code ? Object.values(db().units).find((u) => u.code === code) : undefined;
+    const found = code ? Object.values(db().units).find((u) => u.code === code) : undefined;
+    // Codes from a voided batch (its card CSV was lost before encoding) are unknown codes.
+    const unit = found && db().batches.find((b) => b.id === found.batchId)?.status !== "void" ? found : undefined;
     if (!unit) {
       recordFailure();
       return fail("invalid_code");
