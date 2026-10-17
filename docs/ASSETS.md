@@ -122,6 +122,12 @@ speaker's written consent recorded here.
 | --- | --- | --- | --- | --- |
 | UI icons (22: play/pause, close, back, upload, mic, mute, etc.) | Controls and navigation | Inline SVG drawn by the team (`components/ui/icons.tsx`) | Original, team-owned | **Built.** No icon library. If one is adopted, add a row with its name, version and licence. |
 
+## Email images
+
+| Asset | Used for | Source / author | Licence | Notes |
+| --- | --- | --- | --- | --- |
+| `public/email/logo.png`, `postmark.png`, `airmail.png` | The header, postmark and airmail stripe of every email (`lib/email/html.ts`) | Drawn by `scripts/email-assets.mjs` from the site's own logo mark, colours and Nanum Pen Script (SIL OFL 1.1) | Original, team-owned | PNG at 2×: Gmail can't show SVG. Re-run the script after the rebrand. |
+
 ---
 
 ## Verification log

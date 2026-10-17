@@ -11,8 +11,11 @@ Short written stand-up per working day: done / next / blocked. Newest first.
 - Codes are always 4 characters, `SAUD-3K7M`, as agreed (O9 closed). `NEXT_PUBLIC_CODE_LENGTH` and the 8-box
   input are gone.
 - Docs updated (HANDOVER, LAUNCH_READINESS, OPEN_QUESTIONS, ARCHITECTURE note, DECISIONS D-089).
-- **Tests:** unit 20/20; API smoke 84/84 (86/86 with the breaker); API journey 26/26 Chromium, 25/25 WebKit;
+- **Tests:** unit 23/23; API smoke 84/84 (86/86 with the breaker); API journey 26/26 Chromium, 25/25 WebKit;
   prototype journey 64/64, 0 axe violations.
+
+- The admin is for anyone with access, not a build review (D-090): the launch checklist moved to the
+  developer's `npm run launch:check`; the "proposed, pending approval" markers and question numbers are gone.
 
 **Next:** run `npm run db:setup` against staging to apply migration 0003; remove `TOTP_ENC_KEY` (and any
 `NEXT_PUBLIC_CODE_LENGTH`) from the Vercel environment.

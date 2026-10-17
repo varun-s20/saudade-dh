@@ -6,7 +6,7 @@
 #             backup of each month again under db-monthly/YYYY/MM/. Fails loudly if `units` went down.
 #   media     rclone COPY (never sync: nothing in the backup is ever deleted) of the private Supabase
 #             Storage bucket to B2 media/, then checks every object is there.
-#   report    optional: POSTs the outcome (counts only) to the app for the admin's launch checklist.
+#   report    optional: POSTs the outcome (counts only) to the app, so `npm run launch:check` can see it ran.
 #
 # Repository secrets (Settings → Secrets and variables → Actions). Missing required ones fail the job.
 #   BACKUP_DATABASE_URL          Supabase → Connect → Session pooler URI (port 5432), password filled in.

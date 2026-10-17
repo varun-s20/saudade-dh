@@ -957,7 +957,7 @@ CLIENT_GUIDE requirement (`LAUNCH_READINESS.md`).
 - **History and restore**: unit detail lists every saved version; restoring saves the old payload as the newest
   version and brings back soft-removed media (refused once purged). This is the "file versioning so media can be
   recovered" of CLIENT_GUIDE §8, made usable.
-- **Launch checklist**: `GET /api/admin/readiness` on the dashboard; build-time items are shared with the
+- **Launch checklist** *(moved out of the admin to `npm run launch:check`, D-090)*: `GET /api/admin/readiness` on the dashboard; build-time items are shared with the
   prototype (`lib/readiness-config.ts`).
 - **Operator CLIs**: `npm run provision` (the ceremony from a terminal, dry run unless `--yes`, files mode 600)
   and `npm run admin` (list / add / reset-password / disable / enable, all audited).
@@ -1024,6 +1024,28 @@ The product owner reviewed what had been added beyond CLIENT_GUIDE and took two 
   limits and the breaker (HANDOVER §10); ARCHITECTURE §3.3 keeps the analysis for the record. The
   `batches.code_length` column stays (always 4 for new batches); its check still admits 8 so no existing row can
   block the migration.
+
+### D-090 · The admin is for whoever runs the shop, not for us
+The admin is used by anyone given access, now and later, so it shows only what helps run the business: units,
+batches, support actions, history, activity. Taken out:
+- **The launch checklist.** It is a developer's tool (env settings, keys, cron, backups), so it moved to
+  `npm run launch:check -- --env-file <file>` (`scripts/launch-check.mjs`, logic in `scripts/lib/launch-checks.mjs`
+  with unit tests). It reads the env file, `content/legal.ts` and the database, and exits 1 while anything needs
+  fixing. Removed: the dashboard card, `GET /api/admin/readiness`, `lib/server/readiness.ts`,
+  `lib/readiness-config.ts`, `AdminService.getReadiness`. `ops_runs` still records the nightly job and backups for it.
+- **Build-review notes**: the † "proposed status, pending the client's approval" markers on statuses and the
+  timeline, the "Proposed" badge on Reset the reveal, and open-question numbers like "(O2)" in admin text.
+  The batch screen's placeholder-domain warning stays (it protects whoever generates a batch), reworded.
+
+### D-091 · Emails look like the site
+Every email is now HTML in the site's look (`lib/email/html.ts`) with the plain-text version alongside: linen
+ground, the stamp-and-heart wordmark, a paper card edged with the airmail stripe and a postmark, a block-capital
+headline finished by a handwritten word, the brick-red button, and the raw link under it. Email-safe on purpose:
+tables and inline styles, PNG images (`public/email/`, drawn by `scripts/email-assets.mjs`, since Gmail shows no
+SVG), web fonts only where supported (Apple Mail) with Arial Black / Arial / the system hand elsewhere, and a layout
+that holds at 375 px with images blocked. Words live once in `lib/email/templates.ts` and fill both bodies. The HTML
+is never stored or returned by the API (it carries the private link or code). Images and links use
+`PUBLIC_APP_ORIGIN`, else the address the request came in on.
 
 ## Sender & recipient build + integration (2026-10-08)
 

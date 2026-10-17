@@ -122,9 +122,8 @@ export function BatchScreen() {
           <Card title="Generate a batch" description="Each unit gets an activation code, an NFC slug, and the exact URL for its chip.">
             {placeholderDomain && dataSource === "api" && (
               <div role="note" className="mb-4 rounded-soft border-2 border-ochre bg-ochre/15 px-4 py-3 text-sm text-admin-ink">
-                <p className="font-semibold">Not ready for the launch batch yet</p>
-                <p className="mt-1">The chip domain is still the placeholder {PLACEHOLDER_CHIP_DOMAIN}: batches made now are for testing only and must never be encoded.</p>
-                <p className="mt-1 text-xs text-admin-ink-soft">See the launch checklist on the dashboard.</p>
+                <p className="font-semibold">For testing only</p>
+                <p className="mt-1">The chip domain hasn&apos;t been set yet (it&apos;s still {PLACEHOLDER_CHIP_DOMAIN}). Batches made now must never be sent to be encoded.</p>
               </div>
             )}
             <form onSubmit={generate} noValidate className="grid gap-4 sm:grid-cols-[10rem_1fr_auto] sm:items-start">
@@ -249,7 +248,7 @@ export function BatchScreen() {
             <strong className="font-medium text-admin-ink">Chip URLs</strong> use Saudade&apos;s own domain, never a hosting provider&apos;s:
             <span className="mt-1 block font-mono text-xs break-all text-admin-ink">{sampleUrl}</span>
             <span className="mt-1 block text-xs">
-              {placeholderDomain && `${site.chipDomain} is a placeholder until the domain is confirmed (O2). `}
+              {placeholderDomain && `${site.chipDomain} is a placeholder until the real domain is set. `}
               Each record is {ndefBytes(sampleUrl)} of the NTAG213&apos;s {NTAG213_BYTES} bytes.
             </span>
           </p>

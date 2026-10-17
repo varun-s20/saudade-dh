@@ -39,6 +39,8 @@ the provisioning ceremony, admins, monitoring). What's done and what waits on Sa
 |---|---|
 | `npm run provision -- --count 300 --label "Launch run" --env-file <file>` | The provisioning ceremony from a terminal (dry run unless `--yes`): card file + factory file |
 | `npm run admin -- list \| add \| reset-password \| disable \| enable` | Admin accounts (there is no sign-up page) |
+| `node scripts/email-assets.mjs` | Redraws the email images in `public/email/` (logo, postmark, airmail stripe) after a rebrand |
+| `npm run launch:check -- --env-file <file>` | Developer-only launch checklist: settings, keys, legal wording, nightly jobs, backups, stuck jobs. Exits 1 while anything needs fixing |
 | `npm run storage:stub` | In-memory Supabase Storage stand-in, to run the whole API locally or in CI |
 
 CI (`.github/workflows/ci.yml`) runs lint, types, unit tests, a build, and the whole API on PostgreSQL 15 on every
@@ -100,7 +102,7 @@ config/
 content/
   legal.ts              Privacy Policy and Terms wording (supplied by Saudade, O14)
 lib/
-  server/               The backend: admin auth, envelopes, media pipeline, jobs, cron, songs, readiness
+  server/               The backend: admin auth, envelopes, media pipeline, jobs, cron, songs
   services/             types.ts (contracts) · mock/ (prototype) · api/ (real backend)
   state/                Zustand stores: db (mock server), demo, device, toast, media-store
   parsing/              codes.ts (activation codes, slugs, tokens) · songs.ts (link parsing)
@@ -171,7 +173,7 @@ Zustand 5, idb-keyval, browser-image-compression.
     rejects them under Cache Components. `maxDuration` is fine. Request-time APIs keep them dynamic.
 18. **Deployment values come from the environment** (`NEXT_PUBLIC_CHIP_DOMAIN`, `NEXT_PUBLIC_SUPPORT_EMAIL`…, read in
     `config/site.ts`), never hard-coded. Add a new one to `.env.example`, `docs/HANDOVER.md` §4 and, if it matters
-    for launch, the checklist (`lib/readiness-config.ts` or `lib/server/readiness.ts`).
+    for launch, the launch check (`scripts/lib/launch-checks.mjs`).
 19. **Third-party content needs the CSP** in `next.config.ts`: a new script, frame or image host must be added
     there, or `scripts/e2e.mjs` / `scripts/e2e-api.mjs` fail on the violation.
 20. **Never serve an upload as uploaded.** Media goes through `lib/server/media-pipeline.ts`; a new kind of media

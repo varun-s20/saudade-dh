@@ -3,7 +3,7 @@
  *
  * STATUS: DRAFT written by the build team from how the system actually works, for Saudade and their
  * legal adviser to review and correct (product owner's request, 16 Oct). It is not legal advice.
- * While `draft` is true the pages say "Draft, under review" and the admin's launch checklist warns.
+ * While `draft` is true the pages say "Draft, under review" and `npm run launch:check` warns.
  *
  * To publish the reviewed wording:
  *   1. replace the paragraphs (one string per paragraph, plain text) and fill every [bracketed] gap;

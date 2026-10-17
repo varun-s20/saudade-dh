@@ -3,7 +3,7 @@ import { HERO } from "@/lib/demo/constants";
 import { generateToken, normaliseCode } from "@/lib/parsing/codes";
 import type { ClaimResult, SenderEnvelope, ServiceResult, UnitService } from "@/lib/services/types";
 import { isForced } from "@/lib/state/demo";
-import { recoverLinkEmail, senderLinkEmail } from "@/lib/email/templates";
+import { recoverLinkEmail, senderLinkEmail, withoutHtml } from "@/lib/email/templates";
 import { emailService } from "./email";
 import { appendAudit, db, fail, hasContent, latency, nowIso, ok, patchUnit, ready, unitByToken, update } from "./runtime";
 
@@ -86,7 +86,7 @@ export const unitService: UnitService = {
     if (!unit) return fail("not_found");
     patchUnit(unit.id, { senderEmail: email.trim().toLowerCase() });
     const link = `${typeof window !== "undefined" ? window.location.origin : ""}${senderPath(token)}`;
-    await emailService.send(senderLinkEmail({ to: email, link }));
+    await emailService.send(withoutHtml(senderLinkEmail({ to: email, link })));
     return ok(undefined);
   },
 
@@ -98,7 +98,7 @@ export const unitService: UnitService = {
     if (matches.length) {
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const links = matches.map((u) => `${origin}${senderPath(u.senderToken as string)}`);
-      await emailService.send(recoverLinkEmail({ to: addr, links }));
+      await emailService.send(withoutHtml(recoverLinkEmail({ to: addr, links })));
     }
     // Same response either way: never reveal whether an email is known.
     return ok(undefined);

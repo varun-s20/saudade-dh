@@ -5,10 +5,10 @@
  * The deployment-specific values below come from NEXT_PUBLIC_* build-time variables, so a
  * production build is configured in the host's settings (docs/HANDOVER.md §4) with no code change.
  * Next inlines them at build time; changing one means a rebuild. Unset, they keep the showcase
- * defaults, and the admin's launch checklist (/api/admin/readiness) flags each one still unset.
+ * defaults, and `npm run launch:check` (scripts/launch-check.mjs) flags each one still unset.
  */
 
-/** The placeholder chip domain; the launch checklist refuses it for production batches. */
+/** The placeholder chip domain; the batch screen and `npm run provision` warn against encoding it. */
 export const PLACEHOLDER_CHIP_DOMAIN = "saudade.example";
 
 export const site = {

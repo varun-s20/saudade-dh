@@ -1,7 +1,7 @@
 /**
  * GET /api/cron/daily (Bearer CRON_SECRET) → 200 { ok, summary, errors }.
  * The nightly run (vercel.json, 03:00 UTC): media lifecycle, the job queue, song checks and the
- * privacy-retention clean-up (lib/server/ops.ts). Recorded in ops_runs for the launch checklist.
+ * privacy-retention clean-up (lib/server/ops.ts). Recorded in ops_runs (read by `npm run launch:check`).
  */
 import { requireCron } from "@/lib/server/cron-auth";
 import { json, route } from "@/lib/server/http";

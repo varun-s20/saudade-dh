@@ -87,7 +87,7 @@ of truth for the contract (the $1,000 offer; it supersedes the earlier proposal'
 | Email codes manually (Path B) | **Done** | Unit → Email the code |
 | Reset a lost or compromised code | **Done** | Unit → Reset code |
 | View or remove content for support | **Done**, plus **restore** an earlier version | Unit → What's inside, History |
-| Settings that must be right before launch | **Done**: a live launch checklist | Dashboard → Launch checklist |
+| Settings that must be right before launch | **Done**, for the developer only (not shown in the admin) | `npm run launch:check` |
 
 ### NFC and provisioning (§6.7)
 
@@ -168,7 +168,7 @@ will give the true number.
 
 | Check | Result |
 | --- | --- |
-| `npm run lint`, `npm run typecheck`, `npm test` (20 unit tests) | Clean, clean, 20/20 |
+| `npm run lint`, `npm run typecheck`, `npm test` (23 unit tests) | Clean, clean, 23/23 |
 | `scripts/api-smoke.mjs` (real API on PostgreSQL 15 + the Storage stand-in, migration 0003 applied) | 84/84, including password lock-out; 86/86 with the claim breaker and Turnstile |
 | `scripts/e2e-api.mjs` (browser journey, real API, CSP violations fail it) | Chromium 26/26, including admin sign-in, restore and batches; WebKit 25/25 (the voice upload is skipped there: test WebKit can't play recorded audio; the real-iPhone pass covers it) |
 | `scripts/e2e.mjs` (prototype journey + accessibility) | 64/64 across Chromium and WebKit, 0 axe violations |

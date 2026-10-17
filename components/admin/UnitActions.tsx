@@ -18,7 +18,7 @@ const FAIL: Partial<Record<ServiceErrorCode, string>> = {
 };
 const failText = (code: ServiceErrorCode) => FAIL[code] ?? "Something went wrong. Try again.";
 
-/** S23 actions: email the code (Path B), reset the code, reset the reveal [PROPOSED]. */
+/** S23 actions: email the code (Path B), reset the code, reset the reveal. */
 export function UnitActions({ unit, lastCodeResetAt, onChanged }: { unit: Unit; lastCodeResetAt: string | null; onChanged: () => void }) {
   return (
     <Card title="Actions" bodyClassName="divide-y divide-admin-line p-0">
@@ -29,17 +29,10 @@ export function UnitActions({ unit, lastCodeResetAt, onChanged }: { unit: Unit; 
   );
 }
 
-function ActionBlock({ title, proposed, children }: { title: string; proposed?: boolean; children: React.ReactNode }) {
+function ActionBlock({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="px-4 py-4 md:px-5">
-      <h3 className="text-sm font-medium text-admin-ink">
-        {title}
-        {proposed && (
-          <span className="ml-2 rounded-pill border border-admin-line px-1.5 py-px text-xs font-normal text-admin-ink-soft" title="Proposed feature, pending the client's approval (O12)">
-            Proposed
-          </span>
-        )}
-      </h3>
+      <h3 className="text-sm font-medium text-admin-ink">{title}</h3>
       <div className="mt-1.5 space-y-3 text-sm text-admin-ink-soft">{children}</div>
     </div>
   );
@@ -235,7 +228,7 @@ function ResetRevealAction({ unit, onChanged }: { unit: Unit; onChanged: () => v
   };
 
   return (
-    <ActionBlock title="Reset the first-tap reveal" proposed>
+    <ActionBlock title="Reset the first-tap reveal">
       <p>For a reveal that was spoiled by accident, or a re-gift. The next tap plays the opening again.</p>
       <AdminButton onClick={() => setConfirming(true)} disabled={!revealed} aria-describedby={!revealed ? "reveal-hint" : undefined}>
         Reset reveal…

@@ -183,8 +183,8 @@ Repository → Settings → Secrets and variables → **Actions** → New reposi
 
 A missing required secret fails the job with its name in the error. Nothing passes silently.
 
-When both `BACKUP_REPORT_URL` and `BACKUP_REPORT_TOKEN` are set, a last job posts the outcome to the app, so the
-admin's launch checklist can show when the last good backup ran. It sends counts only: `ok`, database size, units,
+When both `BACKUP_REPORT_URL` and `BACKUP_REPORT_TOKEN` are set, a last job posts the outcome to the app, so
+`npm run launch:check` can show when the last good backup ran. It sends counts only: `ok`, database size, units,
 media objects, and a short reason when something failed. If the app cannot be reached, the run shows a warning; the
 backups themselves still count as done. Without the two secrets the report is skipped with a notice, and the
 checklist keeps saying no backup has reported in.

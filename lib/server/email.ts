@@ -1,12 +1,12 @@
 /**
- * Transactional email. The server renders every message from lib/email/templates.ts (no public
- * send endpoint, so no open relay). With RESEND_API_KEY set it is delivered through Resend from
+ * Transactional email: HTML in the site's look, with a plain-text alternative. The server renders
+ * every message from lib/email/templates.ts (no public send endpoint, so no open relay). With RESEND_API_KEY set it is delivered through Resend from
  * EMAIL_FROM on the client's verified domain; without it (staging before the domain exists, O2)
  * the message is recorded in email_log as `provider = 'log'` and not delivered.
  * The body is never stored: it carries a private link or an activation code.
  */
 import "server-only";
-import type { EmailDraft } from "@/lib/email/templates";
+import { withoutHtml, type EmailDraft } from "@/lib/email/templates";
 import type { EmailMessage } from "@/lib/services/types";
 import { isoReq, sql } from "./db";
 import { env } from "./env";
@@ -24,7 +24,7 @@ export async function sendEmail(draft: EmailDraft, unitId: string | null): Promi
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-        body: JSON.stringify({ from: env.emailFrom(), to: [draft.to], subject: draft.subject, text: draft.text }),
+        body: JSON.stringify({ from: env.emailFrom(), to: [draft.to], subject: draft.subject, html: draft.html, text: draft.text }),
         signal: AbortSignal.timeout(10_000),
       });
       const body = (await res.json().catch(() => null)) as { id?: string; message?: string } | null;
@@ -45,5 +45,5 @@ export async function sendEmail(draft: EmailDraft, unitId: string | null): Promi
             ${status === "sent" ? new Date() : null})
     returning id, created_at`;
   if (status === "failed") console.error(`[email] ${draft.template} failed: ${error}`);
-  return { ...draft, id: row.id, sentAt: isoReq(row.created_at) };
+  return { ...withoutHtml(draft), id: row.id, sentAt: isoReq(row.created_at) };
 }

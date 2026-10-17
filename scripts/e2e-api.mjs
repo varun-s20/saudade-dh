@@ -197,7 +197,7 @@ try {
   await a.keyboard.press("Enter");
   await a.waitForURL(/\/admin\/dashboard/, { timeout: 20000 }).catch(() => {});
   check("admin: signed in to the dashboard", /\/admin\/dashboard/.test(a.url()));
-  check("admin: the launch checklist is on the dashboard", await seen(a.getByRole("heading", { name: /Launch checklist/i })));
+  check("admin: dashboard shows units by status, and no launch checklist", (await seen(a.getByRole("heading", { name: /Units by status/i }))) && !(await a.getByText(/Launch checklist/i).count()));
   await a.waitForLoadState("networkidle"); // WebKit reports fetches cancelled by navigating away as page errors
   await a.screenshot({ path: path.join(OUT, `${ENGINE}-06b-dashboard.png`), fullPage: true });
 

@@ -16,7 +16,7 @@
  * Admin sign-in: with DATABASE_URL available the script creates a throwaway admin for the run and
  * disables it at the end; otherwise it signs in as ADMIN_EMAIL / ADMIN_PASSWORD.
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -327,7 +327,7 @@ try {
   const list = await call("GET", "/api/admin/batches", { admin: true });
   check("batch: list shows status and claim counts", list.data?.find((b) => b.id === batch.data.batch.id)?.claimedCount === 2);
 
-  // ── Scheduled jobs and the launch checklist ──────────────────────────────
+  // ── Scheduled jobs (and the developer's launch check that reports them) ──
   check("cron: refused without the secret", (await call("GET", "/api/cron/daily")).status === 401);
   if (CRON) {
     const auth = { authorization: `Bearer ${CRON}` };
@@ -339,11 +339,13 @@ try {
       (await call("POST", "/api/cron/backup-report", { headers: auth, body: { ok: true, summary: { units: 3, dbBytes: 1234 } } })).status === 204,
     );
   }
-  const ready = await call("GET", "/api/admin/readiness", { admin: true });
-  const byId = Object.fromEntries((ready.data?.checks ?? []).map((c) => [c.id, c]));
-  check("readiness: the launch checklist answers", ready.status === 200 && ready.data?.checks?.length >= 10);
-  check("readiness: chip domain and email are checked", Boolean(byId.chip_domain && byId.email));
-  if (CRON) check("readiness: …nightly jobs and backups show as done", byId.cron?.status === "ok" && byId.backup?.status === "ok");
+  check("admin: no launch checklist in the admin API", (await call("GET", "/api/admin/readiness", { admin: true })).status === 404);
+  if (CRON && db && fs.existsSync(envFile)) {
+    const run = spawnSync(process.execPath, [path.join("scripts", "launch-check.mjs"), "--env-file", envFile], { encoding: "utf8" });
+    const flagged = run.status === 1 && /FIX\s+Chip domain/.test(run.stdout);
+    check("launch:check runs and flags the placeholder chip domain", flagged, flagged ? "" : (run.stderr || run.stdout).slice(0, 300));
+    check("launch:check …sees tonight's jobs and backup", /OK\s+Nightly jobs/.test(run.stdout) && /OK\s+Off-site backups/.test(run.stdout));
+  }
 
   // ── Recovery ─────────────────────────────────────────────────────────────
   check(

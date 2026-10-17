@@ -1,7 +1,6 @@
 import { recipientUrl, site } from "@/config/site";
 import { summarise } from "@/lib/content-summary";
 import { codeBody, generateCode, generateId, generateSlug } from "@/lib/parsing/codes";
-import { configChecks } from "@/lib/readiness-config";
 import type {
   AdminService,
   AdminSession,
@@ -14,14 +13,14 @@ import type {
   UnitStatus,
 } from "@/lib/services/types";
 import { STAMP_KINDS, UNIT_STATUSES } from "@/lib/services/types";
-import { giftCodeEmail } from "@/lib/email/templates";
+import { giftCodeEmail, withoutHtml } from "@/lib/email/templates";
 import { emailService } from "./email";
 import { appendAudit, db, fail, latency, nowIso, ok, patchUnit, ready, statusAfterEdit, update } from "./runtime";
 
 /** Prototype-only credentials, shown on the login screen as a demo hint. */
 export const DEMO_ADMIN = { email: "zeya@saudade.example", password: "postmark" } as const;
 
-/** Version history and the full launch checklist live on the real backend. */
+/** Version history lives on the real backend. */
 const BACKEND_ONLY = { detail: "Available with the real backend (NEXT_PUBLIC_DATA_SOURCE=api)" };
 
 function signedIn(): boolean {
@@ -80,24 +79,6 @@ export const adminService: AdminService = {
   async getSession() {
     await ready();
     return db().admin;
-  },
-
-  async getReadiness() {
-    await ready();
-    await latency(0.4);
-    if (!signedIn()) return fail("unauthorized");
-    return ok({
-      checkedAt: nowIso(),
-      checks: [
-        {
-          id: "prototype",
-          label: "Prototype data",
-          status: "warn",
-          detail: "This is the clickable prototype: everything lives in this browser. Email, backups and the nightly jobs are checked on the real backend.",
-        },
-        ...configChecks(),
-      ],
-    });
   },
 
   async getStats() {
@@ -195,7 +176,7 @@ export const adminService: AdminService = {
     const unit = db().units[unitId];
     if (!unit) return fail("not_found");
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const sent = await emailService.send(giftCodeEmail({ to, code: unit.code, origin }));
+    const sent = await emailService.send(withoutHtml(giftCodeEmail({ to, code: unit.code, origin })));
     if (!sent.ok) return sent;
     patchUnit(unitId, {
       codeEmailedAt: sent.data.sentAt,
@@ -315,7 +296,7 @@ export const adminService: AdminService = {
       rows.push({ unitNo, code, slug, url: recipientUrl(slug) });
     }
     update((s) => ({ units: { ...s.units, ...created }, batches: [batch, ...s.batches] }));
-    appendAudit({ unitId: null, action: "batch.generated", actor: "admin", detail: `${batch.label}: ${n} units` });
+    appendAudit({ unitId: null, action: "batch.generated", actor: "admin", detail: `${batch.label}: ${n} unit${n === 1 ? "" : "s"}` });
     return ok({ batch, rows });
   },
 

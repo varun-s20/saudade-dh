@@ -64,7 +64,7 @@ function DetailBody({ detail, onChanged }: { detail: UnitDetail; onChanged: () =
           <p className="postal-label mb-1 text-admin-ink-soft">Unit{unit.unitNo ? ` ${unit.unitNo}` : ""}</p>
           <h1 className="flex flex-wrap items-center gap-3">
             <span className="font-postal text-3xl tracking-[0.08em] text-admin-ink">{unit.code}</span>
-            <StatusChip status={unit.status} showProposed />
+            <StatusChip status={unit.status} />
           </h1>
         </div>
         {/* Production returns codes masked (SAUD-····) outside generation/reset: nothing to copy then. */}
@@ -80,7 +80,7 @@ function DetailBody({ detail, onChanged }: { detail: UnitDetail; onChanged: () =
             </span>
             <span className="mt-1 block text-xs text-admin-ink-soft">
               Encoded on the ceramic&apos;s NFC chip.
-              {site.chipDomain === PLACEHOLDER_CHIP_DOMAIN && " Domain is a placeholder until it's confirmed (O2)."} Opening it in this browser while
+              {site.chipDomain === PLACEHOLDER_CHIP_DOMAIN && " The domain is a placeholder until the real one is set."} Opening it in this browser while
               signed in (a packing check) never uses up the recipient&apos;s first open.
             </span>
           </Field>

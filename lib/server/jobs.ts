@@ -5,7 +5,7 @@
  *
  * Workers claim one job at a time with `for update skip locked`, so two cron runs never take the
  * same job. A failure retries with exponential backoff (2, 4, 8… minutes, at most 6 hours) up to
- * max_attempts, then the job is `dead` and shows on the admin's launch checklist.
+ * max_attempts, then the job is `dead` and `npm run launch:check` reports it.
  */
 import "server-only";
 import type postgres from "postgres";

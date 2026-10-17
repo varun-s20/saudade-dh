@@ -8,7 +8,6 @@ interface Step {
   at: string | null;
   /** Shown instead of "Not yet" when the step doesn't apply. */
   note?: string;
-  proposed?: boolean;
 }
 
 /** created → code emailed → claimed → sealed → revealed */
@@ -21,8 +20,8 @@ export function UnitTimeline({ unit }: { unit: Unit }) {
       note: unit.codeEmailedAt ? undefined : unit.path === "A" ? "Not needed: code card in the box (Path A)" : undefined,
     },
     { label: "Claimed", at: unit.claimedAt },
-    { label: "Sealed", at: unit.sealedAt, proposed: true },
-    { label: "Revealed", at: unit.revealedAt, proposed: true },
+    { label: "Sealed", at: unit.sealedAt },
+    { label: "Revealed", at: unit.revealedAt },
   ];
 
   return (
@@ -40,11 +39,6 @@ export function UnitTimeline({ unit }: { unit: Unit }) {
               <div className="min-w-0 text-sm">
                 <p className={cn(done ? "text-admin-ink" : "text-admin-ink-soft")}>
                   {s.label}
-                  {s.proposed && (
-                    <abbr title="Proposed status, pending the client's approval (O7)" className="ml-0.5 no-underline">
-                      †
-                    </abbr>
-                  )}
                   <span className="sr-only">{done ? ": done" : ": not yet"}</span>
                 </p>
                 <p className="text-xs text-admin-ink-soft">{s.at ? <time dateTime={s.at}>{dateTime(s.at)}</time> : (s.note ?? "Not yet")}</p>

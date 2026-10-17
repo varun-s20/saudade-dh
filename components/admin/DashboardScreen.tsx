@@ -8,7 +8,6 @@ import { services } from "@/lib/services";
 import { UNIT_STATUSES, type ServiceError } from "@/lib/services/types";
 import { cn } from "@/lib/utils/cn";
 import { AuditList } from "./AuditList";
-import { LaunchChecklist } from "./LaunchChecklist";
 import { StatCard } from "./StatCard";
 import { STATUS_META } from "./StatusChip";
 import { AdminButton, AdminLinkButton, Card, LoadError, PageHeader, SearchInput, Skeleton } from "./ui";
@@ -95,11 +94,6 @@ export function DashboardScreen() {
                     <span>
                       <span className="sr-only">Step {i + 1}: </span>
                       {m.label}
-                      {m.proposed && (
-                        <abbr title="Proposed status, pending the client's approval" className="ml-0.5 no-underline">
-                          †
-                        </abbr>
-                      )}
                     </span>
                   }
                   value={s ? s.byStatus[status] : null}
@@ -110,14 +104,7 @@ export function DashboardScreen() {
             );
           })}
         </ol>
-        <p className="mt-2 text-xs text-admin-ink-soft">
-          † Proposed statuses, pending the client&apos;s approval (O7): assigned, sealed, revealed. Agreed: unassigned, claimed, filled.
-        </p>
       </section>
-
-      <div className="mt-8">
-        <LaunchChecklist />
-      </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[2fr_1fr]">
         <Card title="Recent activity" description="The latest changes across every unit." bodyClassName="px-4 py-5 md:px-5" className="order-2 lg:order-none">

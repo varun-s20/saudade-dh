@@ -405,7 +405,7 @@ create table idempotency_keys (
 create index idempotency_created_idx on idempotency_keys (created_at);
 
 -- One row per scheduled task (cron.daily, cron.jobs, backup.nightly): last run and outcome, for the
--- admin's launch checklist (migration 0002). Counts only, never personal data.
+-- developer's `npm run launch:check` (migration 0002). Counts only, never personal data.
 create table ops_runs (
   task              text primary key check (task ~ '^[a-z_.]+$' and char_length(task) <= 40),
   last_started_at   timestamptz not null,

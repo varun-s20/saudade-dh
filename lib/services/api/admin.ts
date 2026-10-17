@@ -18,7 +18,6 @@ import type {
   DeliveryPath,
   EmailMessage,
   ProvisionedRow,
-  Readiness,
   StampKind,
   UnitDetail,
   UnitListPage,
@@ -43,10 +42,6 @@ export const apiAdminService: AdminService = {
   async getSession() {
     const res = await request<AdminSession>({ path: "/api/admin/session", auth: "admin" });
     return res.ok ? res.data : null;
-  },
-
-  getReadiness() {
-    return request<Readiness>({ path: "/api/admin/readiness", auth: "admin" });
   },
 
   getStats() {

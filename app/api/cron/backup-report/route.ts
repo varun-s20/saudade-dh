@@ -1,7 +1,7 @@
 /**
  * POST /api/cron/backup-report (Bearer CRON_SECRET) { ok, summary? } → 204.
  * The nightly off-provider backup (GitHub Actions, docs/BACKUPS.md) reports here when it finishes,
- * so the admin's launch checklist can show when the last good backup ran. Counts only.
+ * so `npm run launch:check` can show when the last good backup ran. Counts only.
  */
 import { requireCron } from "@/lib/server/cron-auth";
 import { body, noContent, route } from "@/lib/server/http";

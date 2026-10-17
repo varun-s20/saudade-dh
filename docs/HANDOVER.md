@@ -70,8 +70,9 @@ developer is invited as a member and removed when support ends. Nothing is bille
    is encoded.
 5. **Resend:** verify the domain (SPF, DKIM, DMARC), create a sending-only API key, set `RESEND_API_KEY` and
    `EMAIL_FROM`.
-6. Sign in at `/admin` (§8) and open the **launch checklist** on the dashboard. It
-   checks the settings below live and says what to fix.
+6. Pull the production settings (`vercel env pull .env.production.local --environment=production`) and run
+   `npm run launch:check -- --env-file .env.production.local`. It checks the settings below, the legal wording,
+   the nightly jobs and backups, and says what to fix. It is a developer tool: the admin doesn't show it.
 
 Every push to `main` is checked by CI (`.github/workflows/ci.yml`: lint, types, unit tests, build, and the whole
 API against a test database). Vercel deploys `main`; preview deployments get their own URLs and never touch chips.
@@ -95,8 +96,8 @@ API against a test database). Vercel deploys `main`; preview deployments get the
 | `CODE_PEPPER_V1` | Yes | 64 hex. **Escrow in two places**: losing it voids every unclaimed card |
 | `IP_HASH_KEY` | Yes | 64 hex. Keys IP addresses for rate limits; can be rotated any time |
 | `RESEND_API_KEY` | Yes | Without it, emails are logged in the admin but never sent |
-| `EMAIL_FROM` | Yes | e.g. `Saudade <letters@saudade.gift>`, on the verified domain |
-| `PUBLIC_APP_ORIGIN` | Yes | e.g. `https://saudade.gift`: the start of every emailed link |
+| `EMAIL_FROM` | Yes | e.g. `Saudade <letters@saudade.gift>`, on the verified domain. Before the domain exists, `Saudade <onboarding@resend.dev>` works for testing, but Resend then delivers only to its own account's address |
+| `PUBLIC_APP_ORIGIN` | Yes | e.g. `https://saudade.gift`: the start of every emailed link, and where the emails' images load from. Unset, emails use the address the request came in on (fine on one domain; set it so preview deployments never email their own URLs) |
 | `CRON_SECRET` | Yes | Any long random string. Vercel Cron sends it to the nightly job; the backup workflow uses it to report in |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Recommended | Cloudflare Turnstile widget keys (§10) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Setup only | Used by `npm run db:setup` to create the first admin; not needed on Vercel |
@@ -111,7 +112,7 @@ Make a 64-hex secret with `node -e "console.log(require('crypto').randomBytes(32
 | # | Step | Owner |
 | --- | --- | --- |
 | 1 | Domain registered for 10 years with auto-renew and lock (O2) | Zeya |
-| 2 | Production deployed (§3) with every variable in §4; the launch checklist has no **Fix** left | Developer |
+| 2 | Production deployed (§3) with every variable in §4; `npm run launch:check` has no **FIX** left | Developer |
 | 3 | Privacy Policy and Terms wording pasted into `content/legal.ts` (O14, facts in §9) | Zeya's lawyer, developer |
 | 4 | Stamp artwork swapped in (`config/stamps.ts`, O4) | Developer |
 | 5 | Backups set up and one restore drill passed (`BACKUPS.md` §5) | Developer |
@@ -131,7 +132,7 @@ Make a 64-hex secret with `node -e "console.log(require('crypto').randomBytes(32
 | Backups | 02:30 UTC (GitHub Actions) | `BACKUPS.md` |
 
 Both cron routes refuse any call without `Authorization: Bearer $CRON_SECRET` (Vercel adds it). The last run of
-each, and of the backup, shows on the launch checklist. To run the nightly job by hand:
+each, and of the backup, shows in `npm run launch:check`. To run the nightly job by hand:
 `curl -H "Authorization: Bearer $CRON_SECRET" https://{domain}/api/cron/daily`.
 
 ---
@@ -216,7 +217,7 @@ These limits and the breaker are what protect the agreed 4-character codes (SAUD
 | --- | --- |
 | Is it up? | UptimeRobot on `https://{domain}/api/health` (answers `{"ok":true,"db":true,"version":…}`) and on the home page, alerting Zeya and the developer |
 | Domain and certificate expiry | UptimeRobot's domain/SSL monitor |
-| Nightly jobs, backups, email, conversion | Admin → Dashboard → Launch checklist |
+| Nightly jobs, backups, email, conversion | `npm run launch:check -- --env-file <production env file>` (developer) |
 | Errors | Vercel → Logs. An unexpected server error is logged as `[api {id}]` with its stack, and the API's error response carries the same id (`"server error {id}"`), so a report can be matched to its log line |
 | Who did what | Admin → unit → Audit log; Dashboard → Recent activity |
 
@@ -256,7 +257,7 @@ To run the API locally with no Supabase at all: start `npm run storage:stub` (an
 
 | When | What |
 | --- | --- |
-| Daily (automatic) | Nightly jobs, backups; glance at the launch checklist weekly |
+| Daily (automatic) | Nightly jobs, backups; run `npm run launch:check` weekly |
 | Monthly | Dependency updates (patch/minor) with CI green; read the audit log for anything odd |
 | Quarterly | Restore drill and backup-copy purge (`BACKUPS.md` §5, §2); tap a real ceramic on a current iPhone and Android; check the Spotify / Apple embeds still work |
 | Yearly | Node LTS and major updates; rotate secrets (§13); confirm the domain is renewed at least 5 years ahead |

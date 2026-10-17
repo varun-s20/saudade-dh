@@ -14,6 +14,7 @@
     "api:e2e": "node scripts/e2e-api.mjs",
     "provision": "node scripts/provision.mjs",
     "admin": "node scripts/admin-user.mjs",
+    "launch:check": "node scripts/launch-check.mjs",
     "storage:stub": "node scripts/test/storage-stub.mjs"
   },
   "dependencies": {

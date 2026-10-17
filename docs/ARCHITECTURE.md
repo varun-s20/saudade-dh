@@ -35,6 +35,9 @@ the PM to renumber).
 > **Activation codes are 4 characters**, the agreed `SAUD-3K7M` (O9 closed): §3.3 stays as the record of the
 > analysis, and the claim limits and breaker (§9.2) are what hold off guessing. Text below that describes TOTP or
 > 8-character codes is superseded.
+>
+> **Update 2026-10-16 (DECISIONS D-090):** the launch checklist is not in the admin; it is the developer's
+> `npm run launch:check`. The admin shows only what helps run the business.
 
 | # | Decision | Why |
 | --- | --- | --- |

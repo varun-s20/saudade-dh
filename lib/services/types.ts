@@ -355,20 +355,6 @@ export interface Batch {
   claimedCount: number;
 }
 
-/** One line of the admin's launch checklist (deployment settings that must be right before launch). */
-export interface ReadinessCheck {
-  id: string;
-  label: string;
-  status: "ok" | "warn" | "fail";
-  /** Plain explanation and the fix. */
-  detail: string;
-}
-
-export interface Readiness {
-  checkedAt: ISODate;
-  checks: ReadinessCheck[];
-}
-
 export interface ProvisionedRow {
   unitNo: string;
   code: string;
@@ -455,8 +441,6 @@ export interface AdminService {
   signIn(email: string, password: string): Promise<ServiceResult<AdminSession>>;
   signOut(): Promise<void>;
   getSession(): Promise<AdminSession | null>;
-  /** Settings that must be right before launch (chip domain, email, nightly jobs…). */
-  getReadiness(): Promise<ServiceResult<Readiness>>;
   getStats(): Promise<ServiceResult<AdminStats>>;
   listUnits(query: UnitListQuery): Promise<ServiceResult<UnitListPage>>;
   getUnit(unitId: string): Promise<ServiceResult<UnitDetail>>;

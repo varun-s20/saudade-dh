@@ -1,23 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { summarise } from "@/lib/content-summary";
-import { configChecks } from "@/lib/readiness-config";
 import { privacyPolicy, wordingSupplied, type LegalDoc } from "@/content/legal";
-
-describe("launch checklist (build configuration)", () => {
-  // Default build: no NEXT_PUBLIC_* settings, so every launch item is flagged.
-  const byId = Object.fromEntries(configChecks().map((c) => [c.id, c]));
-
-  it("refuses the placeholder chip domain", () => {
-    expect(byId.chip_domain.status).toBe("fail");
-    expect(byId.chip_domain.detail).toContain("NEXT_PUBLIC_CHIP_DOMAIN");
-  });
-
-  it("flags the showcase link, the support address and the legal placeholders", () => {
-    expect(byId.showcase_link.status).toBe("warn");
-    expect(byId.support_email.status).toBe("warn");
-    expect(byId.legal.status).toBe("warn");
-  });
-});
 
 describe("legal wording", () => {
   it("is incomplete until approved, dated, and every section has text", () => {
